@@ -44,6 +44,7 @@ function saveData() {
     console.error('LocalStorage save failed', e);
   }
   updateStats();
+  updateParentRowsDOM();
 }
 
 // Format Rupiah
@@ -141,6 +142,95 @@ function applyFilters() {
   renderTable();
 }
 
+// HIERARCHY AUTO-UPDATE LOGIC:
+// Check if all children under a parent (Level 1, 2, or 3) are "Terlaksana"
+function computeParentStatus(parentItem) {
+  const prefix = (parentItem.kode_program || '').trim();
+  const children = rkasData.filter(x => x.level === 4 && (x.kode_program || '').trim().startsWith(prefix));
+  const total = children.length;
+
+  if (total === 0) {
+    return { status: '', isAllDone: false, label: '-', pct: 0, done: 0, total: 0 };
+  }
+
+  const done = children.filter(c => c.status === 'Terlaksana').length;
+  const cancel = children.filter(c => c.status === 'Tidak Terlaksana').length;
+  const pct = Math.round((done / total) * 100);
+
+  if (done === total) {
+    return {
+      status: 'Terlaksana',
+      isAllDone: true,
+      label: '🟢 Terlaksana (100%)',
+      badgeClass: 'badge-parent badge-parent-done',
+      rowClass: 'parent-all-done',
+      pct,
+      done,
+      total
+    };
+  } else if (done > 0) {
+    return {
+      status: 'Sebagian',
+      isAllDone: false,
+      label: `🔵 Sebagian (${done}/${total})`,
+      badgeClass: 'badge-parent badge-parent-partial',
+      rowClass: '',
+      pct,
+      done,
+      total
+    };
+  } else if (cancel === total) {
+    return {
+      status: 'Tidak Terlaksana',
+      isAllDone: false,
+      label: '🔴 Tidak Terlaksana',
+      badgeClass: 'badge-parent badge-parent-pending',
+      rowClass: '',
+      pct: 0,
+      done,
+      total
+    };
+  } else {
+    return {
+      status: 'Belum Terlaksana',
+      isAllDone: false,
+      label: `⚪ Belum (${done}/${total})`,
+      badgeClass: 'badge-parent badge-parent-pending',
+      rowClass: '',
+      pct: 0,
+      done,
+      total
+    };
+  }
+}
+
+// Update parent status badges in DOM immediately without re-rendering all rows
+function updateParentRowsDOM() {
+  const parentRows = document.querySelectorAll('.row-l1, .row-l2, .row-l3');
+  parentRows.forEach(tr => {
+    const no = Number(tr.dataset.no);
+    const item = rkasData.find(x => x.no === no);
+    if (!item) return;
+
+    const res = computeParentStatus(item);
+    item.status = res.status; // Keep parent item status in sync!
+
+    // Toggle parent-all-done class
+    if (res.isAllDone) {
+      tr.classList.add('parent-all-done');
+    } else {
+      tr.classList.remove('parent-all-done');
+    }
+
+    // Update status badge cell
+    const statusCell = tr.querySelector('.parent-status-badge');
+    if (statusCell) {
+      statusCell.className = `parent-status-badge ${res.badgeClass}`;
+      statusCell.textContent = res.label;
+    }
+  });
+}
+
 // Single Switch Function (Cycles: Belum -> Terlaksana -> Tidak Terlaksana -> Belum)
 function cycleStatus(no, autoNext = false) {
   const target = rkasData.find(x => x.no === no);
@@ -162,7 +252,7 @@ function cycleStatus(no, autoNext = false) {
   setItemStatus(no, nextStatus, autoNext);
 }
 
-// In-Place DOM Update for Speed & Smooth 60fps
+// Fast In-Place DOM Update for Level 4 Items & Cascade Parents
 function setItemStatus(no, status, autoNext = false) {
   const target = rkasData.find(x => x.no === no);
   if (!target) return;
@@ -268,8 +358,6 @@ function applyBatchNote() {
 
   saveData();
   applyFilters();
-
-  // Visual notification
   alert(`Berhasil mengisi catatan "${noteVal}" ke ${count} kegiatan terpilih!`);
 }
 
@@ -290,11 +378,10 @@ function clearBatchNote() {
   }
 }
 
-// Set note for all items under a sub-kegiatan
 function promptSubkegiatanNote(kodeProgramPrefix, title) {
   const defaultVal = `Tgl: ${getTodayFormatted()}`;
   const note = prompt(`Masukkan catatan/tanggal untuk seluruh rincian kegiatan "${title}":`, defaultVal);
-  if (note === null) return; // user cancelled
+  if (note === null) return;
 
   let count = 0;
   rkasData.forEach(item => {
@@ -308,7 +395,6 @@ function promptSubkegiatanNote(kodeProgramPrefix, title) {
   applyFilters();
 }
 
-// Mark all items under sub-kegiatan as Terlaksana
 function markSubkegiatanStatus(kodeProgramPrefix, status) {
   rkasData.forEach(item => {
     if (item.level === 4 && item.kode_program.startsWith(kodeProgramPrefix)) {
@@ -349,7 +435,9 @@ function renderTable() {
 
     if (lvl === 1) {
       // LEVEL 1: STANDAR (Deep Navy)
-      tr.className = 'row-l1';
+      const res = computeParentStatus(item);
+      item.status = res.status;
+      tr.className = `row-l1 ${res.isAllDone ? 'parent-all-done' : ''}`;
       tr.innerHTML = `
         <td class="col-check" style="opacity: 0.5;">•</td>
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
@@ -362,8 +450,10 @@ function renderTable() {
         <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #e2e8f0;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="col-btn" style="opacity: 0.7; font-size: 10px;">Pagu Standar</td>
-        <td class="col-note" style="font-size: 10px; opacity: 0.6; font-style: italic;">
+        <td class="col-btn">
+          <span class="parent-status-badge ${res.badgeClass}">${res.label}</span>
+        </td>
+        <td class="col-note" style="font-size: 10px; opacity: 0.7; font-style: italic;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -373,7 +463,9 @@ function renderTable() {
 
     if (lvl === 2) {
       // LEVEL 2: PROGRAM (Soft Emerald)
-      tr.className = 'row-l2';
+      const res = computeParentStatus(item);
+      item.status = res.status;
+      tr.className = `row-l2 ${res.isAllDone ? 'parent-all-done' : ''}`;
       tr.innerHTML = `
         <td class="col-check"></td>
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
@@ -386,7 +478,9 @@ function renderTable() {
         <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #065f46;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="col-btn" style="font-size: 10px; color: #047857;">Pagu Program</td>
+        <td class="col-btn">
+          <span class="parent-status-badge ${res.badgeClass}">${res.label}</span>
+        </td>
         <td class="col-note" style="font-size: 10px; color: #059669;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
@@ -397,7 +491,9 @@ function renderTable() {
 
     if (lvl === 3) {
       // LEVEL 3: KEGIATAN (Soft Amber)
-      tr.className = 'row-l3';
+      const res = computeParentStatus(item);
+      item.status = res.status;
+      tr.className = `row-l3 ${res.isAllDone ? 'parent-all-done' : ''}`;
       tr.innerHTML = `
         <td class="col-check"></td>
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
@@ -424,7 +520,9 @@ function renderTable() {
         <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #92400e;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="col-btn" style="font-size: 10px; color: #b45309;">Sub-Total</td>
+        <td class="col-btn">
+          <span class="parent-status-badge ${res.badgeClass}">${res.label}</span>
+        </td>
         <td class="col-note" style="font-size: 10px; color: #d97706;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
@@ -727,7 +825,7 @@ function exportToExcel() {
     ["LEMBAR VERIFIKASI PELAKSANAAN RENCANA KEGIATAN DAN ANGGARAN SEKOLAH (RKAS)"],
     ["SMK NEGERI 4 SURAKARTA - TAHUN ANGGARAN 2026"],
     [`NPSN: 20328152 | Sumber Dana: BOSP Reguler Rp 2.204.800.000 | Tanggal Verifikasi: ${todayStr}`],
-    [], // Blank separator row
+    [],
     [
       "No.",
       "Tingkat (Level)",
@@ -748,19 +846,27 @@ function exportToExcel() {
   rkasData.forEach(item => {
     let uraianFmt = item.uraian || '';
     let lvlLabel = 'ITEM';
+    let statusFmt = item.status || '(Belum diverifikasi)';
 
     if (item.level === 1) {
       lvlLabel = 'STANDAR';
       uraianFmt = `[STANDAR] ${item.uraian.toUpperCase()}`;
+      const res = computeParentStatus(item);
+      statusFmt = res.label;
     } else if (item.level === 2) {
       lvlLabel = 'PROGRAM';
       uraianFmt = `   [PROGRAM] ${item.uraian}`;
+      const res = computeParentStatus(item);
+      statusFmt = res.label;
     } else if (item.level === 3) {
       lvlLabel = 'KEGIATAN';
       uraianFmt = `      [KEGIATAN] ${item.uraian}`;
+      const res = computeParentStatus(item);
+      statusFmt = res.label;
     } else {
       lvlLabel = 'ITEM';
       uraianFmt = `         ↳ ${item.uraian}`;
+      statusFmt = item.status || '(Belum diverifikasi)';
     }
 
     sheetRows.push([
@@ -775,14 +881,13 @@ function exportToExcel() {
       item.jumlah || 0,
       item.tahap_1 || 0,
       item.tahap_2 || 0,
-      item.status || '(Belum diverifikasi)',
+      statusFmt,
       item.keterangan || ''
     ]);
   });
 
   const wsData = XLSX.utils.aoa_to_sheet(sheetRows);
 
-  // Set explicit column widths for clean reading
   wsData['!cols'] = [
     { wch: 6 },   // No
     { wch: 12 },  // Level
@@ -795,7 +900,7 @@ function exportToExcel() {
     { wch: 18 },  // Jumlah
     { wch: 16 },  // Tahap 1
     { wch: 16 },  // Tahap 2
-    { wch: 22 },  // Status Pelaksanaan
+    { wch: 25 },  // Status Pelaksanaan (Automatic Cascade)
     { wch: 35 }   // Catatan / Tanggal
   ];
 
@@ -896,7 +1001,6 @@ function exportToExcel() {
 
   XLSX.utils.book_append_sheet(wb, wsRekap, "Rekapitulasi Anggaran");
 
-  // Write and trigger download
   const dateFileStr = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `Verifikasi_RKAS_SMKN4_Surakarta_${dateFileStr}.xlsx`);
 }
