@@ -4,25 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verifikasi Cepat RKAS 2026 - SMKN 4 Surakarta</title>
-  <!-- Zero-framework, ultra-lightweight native stylesheet -->
+  <!-- Light, clean, ultra-responsive native stylesheet -->
   <link rel="stylesheet" href="styles.css">
-  <!-- SheetJS for instant client-side Excel Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Chart.js for high-res chart generation -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- ExcelJS for themed workbook and embedded charts in sheet -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 
   <div class="app-container">
 
-    <!-- 1. TOP NAVBAR -->
+    <!-- 1. TOP NAVBAR (Light Theme) -->
     <header class="navbar">
       <div class="nav-title">
         <div class="brand-icon">✓</div>
         <div>
           <div style="display: flex; align-items: baseline; gap: 8px;">
-            <strong style="font-size: 13px; letter-spacing: 0.3px;">Verifikasi Cepat RKAS 2026</strong>
-            <span style="font-size: 11px; opacity: 0.85;">SMK NEGERI 4 SURAKARTA</span>
+            <strong style="font-size: 13px; letter-spacing: 0.3px; color: #0f172a;">Verifikasi Cepat RKAS 2026</strong>
+            <span style="font-size: 11px; color: #475569; font-weight: 600;">SMK NEGERI 4 SURAKARTA</span>
           </div>
-          <div style="font-size: 10px; opacity: 0.65; margin-top: 1px;">
+          <div style="font-size: 10px; color: #64748b; margin-top: 1px;">
             Pagu BOSP Reguler: Rp 2.204.800.000 • NPSN: 20328152
           </div>
         </div>
@@ -43,8 +45,8 @@
           <input type="file" id="fileRestore" accept=".json" style="display: none;">
         </label>
 
-        <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx) dengan Format Lengkap & Rapi">
-          📥 <span>Unduh Excel (.xlsx)</span>
+        <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx) dengan Sheet Grafik & Tema Ringan">
+          📥 <span>Unduh Excel + Grafik</span>
         </button>
       </div>
     </header>
@@ -136,7 +138,7 @@
             ☑️ Pilih Semua (<span id="selectedCount">0</span>)
           </button>
           <span style="color: #cbd5e1;">|</span>
-          <span style="font-size: 10px; color: var(--text-muted);">Status:</span>
+          <span style="font-size: 10px; color: var(--text-muted);">Tandai:</span>
           <button onclick="batchSetStatus('Terlaksana')" class="badge-pill" style="background: var(--color-done-bg); color: var(--color-done); border-color: var(--color-done-border); cursor: pointer; padding: 2px 6px;">
             🟢 Terlaksana
           </button>
@@ -173,16 +175,16 @@
     <main class="table-viewport">
       <div class="table-card">
         
-        <!-- Fixed Header -->
+        <!-- Fixed Header (Light Theme) -->
         <div class="table-header-wrap">
           <table>
             <thead>
-              <tr style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">
+              <tr>
                 <th class="col-check"><input type="checkbox" id="headerCheckbox" style="cursor: pointer;"></th>
                 <th class="col-no">No.</th>
                 <th class="col-desc">Hirarki & Uraian Kegiatan RKAS</th>
                 <th class="col-amt">Anggaran (Pagu & Tahap)</th>
-                <th class="col-btn" style="background: #0f172a;">1 Tombol Switch</th>
+                <th class="col-btn">1 Tombol Switch (Auto / Manual)</th>
                 <th class="col-note">Catatan / Tanggal Pelaksanaan</th>
               </tr>
             </thead>
@@ -201,7 +203,7 @@
         <!-- Card Footer -->
         <footer class="app-footer">
           <div>
-            💡 <strong>Tips Efisien:</strong> Centang beberapa kegiatan (atau pilih standar), ketik tanggal/catatan di kotak atas, lalu klik <strong>⚡ Terapkan Catatan</strong>. Catatan akan langsung masuk ke semua kegiatan terpilih!
+            💡 <strong>Otomatis & Manual:</strong> Baris Standar/Program/Kegiatan otomatis terisi "Terlaksana" jika semua itemnya selesai, dan bisa diklik manual untuk switch status. Hasil export Excel otomatis menyertakan <strong>Sheet Grafik</strong> dengan tema warna pastel ringan!
           </div>
           <div style="display: flex; align-items: center; gap: 5px; color: var(--color-done); font-weight: 500;">
             <span class="pulse-dot"></span>
@@ -212,6 +214,12 @@
       </div>
     </main>
 
+  </div>
+
+  <!-- HIDDEN CANVASES FOR CHART GENERATION -->
+  <div style="position: absolute; left: -9999px; top: -9999px;">
+    <canvas id="canvasPieChart" width="600" height="400"></canvas>
+    <canvas id="canvasBarChart" width="800" height="450"></canvas>
   </div>
 
   <!-- MODAL KEYBOARD HELP -->

@@ -1,11 +1,11 @@
 /* ==========================================================================
-   ULTRA-LIGHTWEIGHT, SILKY SMOOTH STYLES FOR RKAS VERIFIKASI 2026
-   Zero-framework, 100% Native CSS, < 10KB, 60fps Hardware-Accelerated
+   ULTRA-LIGHTWEIGHT, SILKY SMOOTH, LIGHT THEME FOR RKAS VERIFIKASI 2026
+   Clean, Pastel, Professional & 60fps Hardware-Accelerated
    ========================================================================== */
 
 :root {
-  --primary: #1e1b4b;       /* Indigo 950 */
-  --primary-light: #312e81; /* Indigo 900 */
+  --primary: #1e293b;       /* Slate 800 */
+  --primary-light: #334155;
   --accent: #4f46e5;        /* Indigo 600 */
   --accent-hover: #4338ca;
   --bg-app: #f8fafc;        /* Slate 50 */
@@ -13,7 +13,7 @@
   --text-muted: #64748b;    /* Slate 500 */
   --border-color: #e2e8f0;  /* Slate 200 */
   
-  /* Status Colors */
+  /* Status Colors - Soft Pastels */
   --color-done: #059669;    /* Emerald 600 */
   --color-done-bg: #ecfdf5;
   --color-done-border: #a7f3d0;
@@ -54,17 +54,18 @@ html, body {
   overflow: hidden;
 }
 
-/* NAVBAR */
+/* NAVBAR (Clean, Professional) */
 .navbar {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  color: #ffffff;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
   padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 .nav-title {
@@ -74,7 +75,8 @@ html, body {
 }
 
 .brand-icon {
-  background: rgba(255, 255, 255, 0.12);
+  background: #e0e7ff;
+  color: #4f46e5;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -82,13 +84,13 @@ html, body {
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  color: #fbbf24;
+  font-weight: bold;
 }
 
 .btn-nav {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #f1f5f9;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
   font-size: 11px;
   font-weight: 500;
   padding: 5px 10px;
@@ -101,7 +103,8 @@ html, body {
 }
 
 .btn-nav:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: #e2e8f0;
+  color: #0f172a;
   transform: translateY(-1px);
 }
 
@@ -111,14 +114,15 @@ html, body {
 
 .btn-excel {
   background: #059669;
-  border: 1px solid #10b981;
+  border: 1px solid #047857;
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(5,150,105,0.25);
+  box-shadow: 0 1px 3px rgba(5,150,105,0.25);
 }
 
 .btn-excel:hover {
   background: #047857;
+  color: #ffffff;
 }
 
 /* STATS METRIC BAR */
@@ -139,7 +143,7 @@ html, body {
   align-items: center;
   gap: 10px;
   flex: 1;
-  max-width: 450px;
+  max-width: 420px;
 }
 
 .progress-track {
@@ -175,7 +179,7 @@ html, body {
 
 /* TOOLBAR */
 .toolbar {
-  background: #f1f5f9;
+  background: #f8fafc;
   border-bottom: 1px solid var(--border-color);
   padding: 6px 16px;
   display: flex;
@@ -268,11 +272,19 @@ html, body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
+/* LIGHT THEME TABLE HEADER */
 .table-header-wrap {
   flex-shrink: 0;
-  background: #1e293b;
-  color: #ffffff;
-  border-bottom: 2px solid #0f172a;
+  background: #f1f5f9;
+  color: #1e293b;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.table-header-wrap th {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.3px;
 }
 
 .table-body-wrap {
@@ -298,33 +310,59 @@ th, td {
 .col-no    { width: 4.5%; text-align: center; }
 .col-desc  { width: 44%; }
 .col-amt   { width: 17%; text-align: right; }
-.col-btn   { width: 14%; text-align: center; }
-.col-note  { width: 17%; }
+.col-btn   { width: 15%; text-align: center; }
+.col-note  { width: 16%; }
 
-/* HIERARCHY LEVEL ROWS */
+/* ==========================================================================
+   LIGHT HIERARCHY THEMES (Clean, Pastel, Gentle on the eyes)
+   ========================================================================== */
+
+/* Level 1: STANDAR - Soft Lavender / Indigo Light */
 .row-l1 {
-  background: #0f172a !important;
-  color: #f8fafc !important;
+  background: #eef2ff !important;
+  color: #1e1b4b !important;
   font-weight: 700;
-  border-top: 2px solid #334155;
+  border-top: 2px solid #a5b4fc;
+  border-bottom: 1px solid #c7d2fe;
 }
 
+.row-l1.parent-all-done {
+  background: #dcfce7 !important;
+  color: #064e3b !important;
+  border-top: 2px solid #86efac !important;
+}
+
+/* Level 2: PROGRAM - Soft Mint Light */
 .row-l2 {
   background: #f0fdf4 !important;
   color: #064e3b !important;
   font-weight: 700;
-  border-left: 4px solid #059669;
+  border-left: 4px solid #10b981;
   border-top: 1px solid #d1fae5;
+  border-bottom: 1px solid #e2e8f0;
 }
 
+.row-l2.parent-all-done {
+  background: #dcfce7 !important;
+  border-left: 4px solid #059669 !important;
+}
+
+/* Level 3: KEGIATAN - Soft Butter / Cream Light */
 .row-l3 {
-  background: #fffbeb !important;
-  color: #78350f !important;
+  background: #fefce8 !important;
+  color: #713f12 !important;
   font-weight: 600;
-  border-left: 4px solid #f59e0b;
-  border-top: 1px solid #fef3c7;
+  border-left: 4px solid #facc15;
+  border-top: 1px solid #fef08a;
+  border-bottom: 1px solid #f1f5f9;
 }
 
+.row-l3.parent-all-done {
+  background: #dcfce7 !important;
+  border-left: 4px solid #10b981 !important;
+}
+
+/* Level 4: ITEM BELANJA - Clean White with Zebra */
 .row-l4 {
   background: #ffffff;
   transition: background-color 0.15s ease;
@@ -352,7 +390,9 @@ th, td {
   box-shadow: inset 0 0 0 2px #3b82f6;
 }
 
-/* SINGLE SWITCH BUTTON */
+/* ==========================================================================
+   SWITCH BUTTONS (Light, Tactile, 60fps)
+   ========================================================================== */
 .switch-btn {
   width: 100%;
   padding: 4px 8px;
@@ -366,7 +406,7 @@ th, td {
   justify-content: space-between;
   gap: 4px;
   transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .switch-btn:active {
@@ -401,12 +441,74 @@ th, td {
 }
 
 .switch-btn.state-empty {
-  background: #f1f5f9;
+  background: #ffffff;
   color: #64748b;
   border-color: #cbd5e1;
 }
 .switch-btn.state-empty:hover {
-  background: #e2e8f0;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Parent Status Button (Interactive manual + automatic) */
+.parent-switch-btn {
+  width: 100%;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.parent-switch-btn:hover {
+  transform: translateY(-1px);
+}
+
+.parent-switch-btn:active {
+  transform: scale(0.96);
+}
+
+.parent-btn-done {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+}
+.parent-btn-done:hover {
+  background: #047857;
+}
+
+.parent-btn-partial {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+.parent-btn-partial:hover {
+  background: #1d4ed8;
+}
+
+.parent-btn-cancel {
+  background: #e11d48;
+  color: #ffffff;
+  border-color: #be123c;
+}
+.parent-btn-cancel:hover {
+  background: #be123c;
+}
+
+.parent-btn-pending {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+.parent-btn-pending:hover {
+  background: #f1f5f9;
   color: #0f172a;
 }
 
@@ -415,7 +517,7 @@ th, td {
   font-family: monospace;
   padding: 1px 4px;
   border-radius: 4px;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.12);
   letter-spacing: 0.5px;
 }
 
@@ -436,7 +538,7 @@ th, td {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(2px);
   z-index: 50;
   display: flex;
@@ -455,10 +557,10 @@ th, td {
 .modal-box {
   background: #ffffff;
   border-radius: 12px;
-  max-width: 400px;
+  max-width: 440px;
   width: 90%;
   padding: 20px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
   transform: translateY(8px) scale(0.98);
   transition: transform 0.2s var(--ease-smooth);
 }
@@ -470,7 +572,7 @@ th, td {
 /* PULSE ANIMATION */
 @keyframes subtlePulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
 }
 .pulse-dot {
   width: 6px;
@@ -479,60 +581,4 @@ th, td {
   background: currentColor;
   display: inline-block;
   animation: subtlePulse 2s infinite ease-in-out;
-}
-/* Badge for Parent Status (Auto Computed from Children) */
-.badge-parent {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  width: 100%;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  letter-spacing: 0.3px;
-  transition: all 0.3s ease;
-}
-
-.badge-parent-done {
-  background: #059669;
-  color: #ffffff;
-  border: 1px solid #047857;
-  animation: pulseParent 1.5s ease-in-out;
-}
-
-.badge-parent-partial {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-.badge-parent-pending {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
-}
-
-@keyframes pulseParent {
-  0% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(5,150,105,0.7); }
-  70% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(5,150,105,0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(5,150,105,0); }
-}
-
-/* Parent row highlight when 100% terlaksana */
-.row-l1.parent-all-done {
-  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
-  border-top: 2px solid #10b981 !important;
-}
-
-.row-l2.parent-all-done {
-  background: #ecfdf5 !important;
-  border-left: 4px solid #059669 !important;
-}
-
-.row-l3.parent-all-done {
-  background: #f0fdf4 !important;
-  border-left: 4px solid #10b981 !important;
 }
