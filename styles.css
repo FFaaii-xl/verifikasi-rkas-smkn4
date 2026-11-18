@@ -54,18 +54,17 @@ html, body {
   overflow: hidden;
 }
 
-/* NAVBAR (Clean, Professional) */
+/* NAVBAR (Midnight Gradient, Sleek Executive Theme) */
 .navbar {
-  background: #ffffff;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-main);
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  color: #ffffff;
   padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .nav-title {
@@ -75,8 +74,8 @@ html, body {
 }
 
 .brand-icon {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fbbf24;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -88,9 +87,9 @@ html, body {
 }
 
 .btn-nav {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f5f9;
   font-size: 11px;
   font-weight: 500;
   padding: 5px 10px;
@@ -103,8 +102,8 @@ html, body {
 }
 
 .btn-nav:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -114,10 +113,10 @@ html, body {
 
 .btn-excel {
   background: #059669;
-  border: 1px solid #047857;
+  border: 1px solid #10b981;
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(5,150,105,0.25);
+  box-shadow: 0 2px 4px rgba(5,150,105,0.25);
 }
 
 .btn-excel:hover {
@@ -126,21 +125,21 @@ html, body {
 }
 
 .btn-cloud {
-  background: #f0fdf4;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #a7f3d0;
   font-weight: 600;
 }
 
 .btn-cloud:hover {
-  background: #dcfce7;
-  color: #047857;
+  background: rgba(16, 185, 129, 0.35);
+  color: #ffffff;
 }
 
 .btn-cloud.connected {
-  background: #ecfdf5;
-  border-color: #34d399;
-  color: #047857;
+  background: #059669;
+  border-color: #10b981;
+  color: #ffffff;
 }
 
 /* STATS METRIC BAR */
@@ -290,18 +289,18 @@ html, body {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
-/* LIGHT THEME TABLE HEADER */
+/* CRISP DARK TABLE HEADER */
 .table-header-wrap {
   flex-shrink: 0;
-  background: #f1f5f9;
-  color: #1e293b;
-  border-bottom: 2px solid #cbd5e1;
+  background: #1e293b;
+  color: #ffffff;
+  border-bottom: 2px solid #0f172a;
 }
 
 .table-header-wrap th {
   font-size: 11px;
   font-weight: 700;
-  color: #334155;
+  color: #ffffff;
   letter-spacing: 0.3px;
 }
 
@@ -332,22 +331,22 @@ th, td {
 .col-note  { width: 16%; }
 
 /* ==========================================================================
-   LIGHT HIERARCHY THEMES (Clean, Pastel, Gentle on the eyes)
+   HIERARCHY THEMES (High Contrast, Distinct Levels)
    ========================================================================== */
 
-/* Level 1: STANDAR - Soft Lavender / Indigo Light */
+/* Level 1: STANDAR - Deep Executive Navy */
 .row-l1 {
-  background: #eef2ff !important;
-  color: #1e1b4b !important;
+  background: #0f172a !important;
+  color: #f8fafc !important;
   font-weight: 700;
-  border-top: 2px solid #a5b4fc;
-  border-bottom: 1px solid #c7d2fe;
+  border-top: 2px solid #334155;
+  border-bottom: 1px solid #1e293b;
 }
 
 .row-l1.parent-all-done {
-  background: #dcfce7 !important;
-  color: #064e3b !important;
-  border-top: 2px solid #86efac !important;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+  color: #ffffff !important;
+  border-top: 2px solid #10b981 !important;
 }
 
 /* Level 2: PROGRAM - Soft Mint Light */

@@ -766,13 +766,13 @@ function renderTable() {
             <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: #fde047;">${escapeHtml(item.uraian)}</span>
           </div>
         </td>
-        <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #1e1b4b;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #f8fafc;">
           ${formatRp(item.jumlah)}
         </td>
         <td class="col-btn">
           ${renderParentSwitchButtonHtml(item)}
         </td>
-        <td class="col-note" style="font-size: 10px; color: #4338ca; font-style: italic;">
+        <td class="col-note" style="font-size: 10px; color: #cbd5e1; font-style: italic;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
