@@ -1,152 +1,103 @@
 <!DOCTYPE html>
-<html lang="id" class="h-full">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verifikasi Cepat RKAS 2026 - SMKN 4 Surakarta</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SheetJS for Excel Import/Export -->
+  <!-- Zero-framework, ultra-lightweight native stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- SheetJS for instant client-side Excel Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- Phosphor Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <style>
-    /* Full height single-screen layout */
-    html, body {
-      height: 100%;
-      overflow: hidden;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    .active-row {
-      outline: 2px solid #3b82f6 !important;
-      background-color: #eff6ff !important;
-    }
-    /* Fixed table styling to avoid horizontal scroll */
-    table {
-      table-layout: fixed;
-      width: 100%;
-    }
-  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-full flex flex-col">
+<body>
 
-  <!-- TOP COMPACT NAVBAR -->
-  <header class="bg-indigo-950 text-white shadow-md z-30 shrink-0">
-    <div class="px-4 py-2 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2.5">
-        <div class="bg-indigo-700/80 p-1.5 rounded-lg text-yellow-400 text-lg flex items-center justify-center">
-          <i class="ph-bold ph-check-square-offset"></i>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <h1 class="text-sm font-bold tracking-tight">Verifikasi RKAS 2026</h1>
-          <span class="text-xs text-indigo-300 font-medium">SMK NEGERI 4 SURAKARTA</span>
-          <span class="hidden sm:inline-block text-[11px] bg-indigo-900 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-700/50">
-            BOSP Reguler: Rp 2.204.800.000
-          </span>
+  <div class="app-container">
+
+    <!-- 1. TOP NAVBAR -->
+    <header class="navbar">
+      <div class="nav-title">
+        <div class="brand-icon">✓</div>
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <strong style="font-size: 13px; letter-spacing: 0.3px;">Verifikasi Cepat RKAS 2026</strong>
+            <span style="font-size: 11px; opacity: 0.85;">SMK NEGERI 4 SURAKARTA</span>
+          </div>
+          <div style="font-size: 10px; opacity: 0.65; margin-top: 1px;">
+            Pagu BOSP Reguler: Rp 2.204.800.000 • NPSN: 20328152
+          </div>
         </div>
       </div>
 
       <!-- Quick Action Buttons -->
-      <div class="flex items-center gap-1.5">
-        <button id="btnKeyboardHelp" class="bg-indigo-900 hover:bg-indigo-800 text-[11px] px-2.5 py-1 rounded-md border border-indigo-700 flex items-center gap-1 transition" title="Lihat Pintasan Keyboard">
-          <i class="ph-bold ph-keyboard"></i>
-          <span class="hidden md:inline">Pintasan Keyboard</span>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button id="btnKeyboardHelp" class="btn-nav" title="Pintasan Keyboard">
+          ⌨️ <span class="hide-mobile">Pintasan</span>
         </button>
 
-        <button id="btnBackup" class="bg-indigo-900 hover:bg-indigo-800 text-[11px] px-2.5 py-1 rounded-md border border-indigo-700 flex items-center gap-1 transition" title="Simpan Cadangan Progres (JSON)">
-          <i class="ph-bold ph-floppy-disk"></i>
-          <span class="hidden md:inline">Backup</span>
+        <button id="btnBackup" class="btn-nav" title="Cadangkan Data (JSON)">
+          💾 <span class="hide-mobile">Backup</span>
         </button>
 
-        <label class="bg-indigo-900 hover:bg-indigo-800 text-[11px] px-2.5 py-1 rounded-md border border-indigo-700 flex items-center gap-1 cursor-pointer transition" title="Pulihkan Progres dari Cadangan">
-          <i class="ph-bold ph-upload-simple"></i>
-          <span class="hidden md:inline">Pulihkan</span>
-          <input type="file" id="fileRestore" accept=".json" class="hidden">
+        <label class="btn-nav" style="cursor: pointer;" title="Pulihkan Data dari Cadangan">
+          📂 <span class="hide-mobile">Pulihkan</span>
+          <input type="file" id="fileRestore" accept=".json" style="display: none;">
         </label>
 
-        <button id="btnExportExcel" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1 rounded-md shadow-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
-          <i class="ph-bold ph-file-xls text-sm"></i>
-          <span>Unduh Excel</span>
+        <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx)">
+          📥 <span>Unduh Excel</span>
         </button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- DASHBOARD RINGKAS (Single Row Bar, Minimal Height) -->
-  <section class="bg-white border-b border-slate-200 px-4 py-2 shrink-0 shadow-2xs">
-    <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
-      <!-- Progress Bar & Count -->
-      <div class="flex items-center gap-3 flex-1 min-w-[280px]">
-        <div class="shrink-0 flex items-baseline gap-1">
-          <span class="text-slate-500 text-[11px]">Progres:</span>
-          <strong id="statProgressPct" class="text-indigo-700 font-bold text-sm">0%</strong>
-          <span id="statProgressDetail" class="text-slate-400 text-[10px]">(0/0 item)</span>
+    <!-- 2. COMPACT STATS BAR -->
+    <section class="stats-bar">
+      <!-- Progress Bar & Text -->
+      <div class="progress-container">
+        <div style="display: flex; align-items: baseline; gap: 4px; font-size: 11px; min-width: 140px;">
+          <span style="color: var(--text-muted);">Progres:</span>
+          <strong id="statProgressPct" style="color: var(--accent); font-size: 13px;">0%</strong>
+          <span id="statProgressDetail" style="color: var(--text-muted); font-size: 10px;">(0/0)</span>
         </div>
-        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex shadow-inner">
-          <div id="barDone" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%" title="Terlaksana"></div>
-          <div id="barPending" class="bg-amber-400 h-full transition-all duration-300" style="width: 0%" title="Belum Terlaksana"></div>
-          <div id="barCancel" class="bg-rose-500 h-full transition-all duration-300" style="width: 0%" title="Tidak Terlaksana"></div>
+        <div class="progress-track">
+          <div id="barDone" class="progress-fill" style="width: 0%; background: var(--color-done);" title="Terlaksana"></div>
+          <div id="barPending" class="progress-fill" style="width: 0%; background: var(--color-pending);" title="Belum Terlaksana"></div>
+          <div id="barCancel" class="progress-fill" style="width: 0%; background: var(--color-cancel);" title="Tidak Terlaksana"></div>
         </div>
       </div>
 
-      <!-- Quick Metrics Pills -->
-      <div class="flex items-center gap-2 shrink-0">
+      <!-- Metric Badges -->
+      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
         <!-- Terlaksana -->
-        <div class="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-md text-[11px]">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div class="badge-pill" style="background: var(--color-done-bg); color: var(--color-done); border-color: var(--color-done-border);">
+          <span class="pulse-dot"></span>
           <span>Terlaksana: <strong id="statCountDone">0</strong></span>
-          <span class="text-emerald-600 font-mono text-[10px]" id="statSumDone">Rp 0</span>
+          <span id="statSumDone" style="font-family: monospace; font-size: 10px; margin-left: 2px;">Rp 0</span>
         </div>
 
         <!-- Tidak Terlaksana -->
-        <div class="flex items-center gap-1 bg-rose-50 border border-rose-200 text-rose-800 px-2 py-0.5 rounded-md text-[11px]">
-          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        <div class="badge-pill" style="background: var(--color-cancel-bg); color: var(--color-cancel); border-color: var(--color-cancel-border);">
           <span>Tidak: <strong id="statCountCancel">0</strong></span>
         </div>
 
         <!-- Belum Terlaksana -->
-        <div class="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-md text-[11px]">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <div class="badge-pill" style="background: var(--color-pending-bg); color: var(--color-pending); border-color: var(--color-pending-border);">
           <span>Belum: <strong id="statCountPending">0</strong></span>
         </div>
 
-        <!-- Belum Diverifikasi -->
-        <div class="flex items-center gap-1 bg-slate-100 border border-slate-300 text-slate-700 px-2 py-0.5 rounded-md text-[11px]">
-          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+        <!-- Sisa Belum Dicek -->
+        <div class="badge-pill" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;">
           <span>Sisa: <strong id="statCountUnchecked">0</strong></span>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- FILTER & TOOLBAR (Compact, Fits 1 Row) -->
-  <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 shrink-0">
-    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-      
-      <!-- Filters (Left) -->
-      <div class="flex items-center gap-2 flex-wrap flex-1">
-        <!-- Search Input -->
-        <div class="relative w-48 sm:w-56">
-          <i class="ph-bold ph-magnifying-glass absolute left-2.5 top-2 text-slate-400"></i>
-          <input type="text" id="searchInput" placeholder="Cari kegiatan, rekening..." 
-            class="w-full pl-7 pr-2.5 py-1 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white">
-        </div>
+    <!-- 3. COMPACT TOOLBAR -->
+    <section class="toolbar">
+      <!-- Search & Filters -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="🔍 Cari nama kegiatan, rekening..." class="input-search" style="width: 200px;">
 
-        <!-- Filter Standar -->
-        <select id="filterStandar" class="py-1 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white max-w-[190px]">
+        <select id="filterStandar" class="select-filter" style="max-width: 170px;">
           <option value="ALL">Semua Standar (8)</option>
           <option value="02.">02. Standar Isi</option>
           <option value="03.">03. Standar Proses</option>
@@ -157,15 +108,13 @@
           <option value="08.">08. Standar Penilaian</option>
         </select>
 
-        <!-- Filter Tahap -->
-        <select id="filterTahap" class="py-1 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white">
+        <select id="filterTahap" class="select-filter">
           <option value="ALL">Semua Tahap</option>
-          <option value="T1">Ada di Tahap 1</option>
-          <option value="T2">Ada di Tahap 2</option>
+          <option value="T1">Alokasi Tahap 1</option>
+          <option value="T2">Alokasi Tahap 2</option>
         </select>
 
-        <!-- Filter Status -->
-        <select id="filterStatus" class="py-1 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white">
+        <select id="filterStatus" class="select-filter">
           <option value="ALL">Semua Status</option>
           <option value="UNCHECKED">⚠️ Belum Dicek</option>
           <option value="Terlaksana">🟢 Terlaksana</option>
@@ -173,118 +122,116 @@
           <option value="Belum Terlaksana">🟡 Belum Terlaksana</option>
         </select>
 
-        <!-- Item count -->
-        <span class="text-slate-500 text-[11px] hidden lg:inline">
-          Tampil: <strong id="visibleCount" class="text-slate-700">0</strong>
+        <span style="font-size: 11px; color: var(--text-muted);">
+          Tampil: <strong id="visibleCount" style="color: var(--text-main);">0</strong>
         </span>
       </div>
 
-      <!-- Batch Actions (Right) -->
-      <div class="flex items-center gap-1.5 shrink-0 text-xs">
-        <button id="btnSelectAllVisible" class="text-indigo-600 hover:text-indigo-800 font-medium text-[11px] flex items-center gap-1">
-          <i class="ph-bold ph-check-square"></i> Pilih Semua (<span id="selectedCount">0</span>)
+      <!-- Batch Actions -->
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button id="btnSelectAllVisible" style="background: transparent; border: none; color: var(--accent); font-weight: 600; font-size: 11px; cursor: pointer; padding: 2px 4px;">
+          ☑️ Pilih Semua (<span id="selectedCount">0</span>)
         </button>
-        <span class="text-slate-300">|</span>
-        <button onclick="batchSetStatus('Terlaksana')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold transition" title="Tandai semua yang dipilih menjadi Terlaksana">
+        <span style="color: #cbd5e1;">|</span>
+        <span style="font-size: 11px; color: var(--text-muted);">Tandai:</span>
+        <button onclick="batchSetStatus('Terlaksana')" class="badge-pill" style="background: var(--color-done-bg); color: var(--color-done); border-color: var(--color-done-border); cursor: pointer; padding: 2px 6px;">
           🟢 Terlaksana
         </button>
-        <button onclick="batchSetStatus('Tidak Terlaksana')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-2 py-0.5 rounded text-[11px] font-semibold transition">
+        <button onclick="batchSetStatus('Tidak Terlaksana')" class="badge-pill" style="background: var(--color-cancel-bg); color: var(--color-cancel); border-color: var(--color-cancel-border); cursor: pointer; padding: 2px 6px;">
           🔴 Tidak
         </button>
-        <button onclick="batchSetStatus('Belum Terlaksana')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded text-[11px] font-semibold transition">
+        <button onclick="batchSetStatus('Belum Terlaksana')" class="badge-pill" style="background: var(--color-pending-bg); color: var(--color-pending); border-color: var(--color-pending-border); cursor: pointer; padding: 2px 6px;">
           🟡 Belum
         </button>
-        <button onclick="batchSetStatus('')" class="bg-slate-200 hover:bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded text-[11px] transition" title="Reset status pilihan">
+        <button onclick="batchSetStatus('')" class="badge-pill" style="background: #e2e8f0; color: #475569; cursor: pointer; padding: 2px 6px;" title="Reset pilihan">
           ✕
         </button>
       </div>
+    </section>
 
-    </div>
-  </section>
-
-  <!-- TABLE CONTAINER (Fills entire remaining viewport with NO horizontal scroll) -->
-  <main class="flex-1 overflow-hidden px-4 py-2 flex flex-col">
-    <div class="bg-white rounded-lg border border-slate-300 shadow-xs flex-1 flex flex-col overflow-hidden">
-      
-      <!-- Table Header (Sticky) -->
-      <div class="overflow-x-hidden shrink-0 border-b border-slate-300 bg-slate-800 text-white text-xs font-semibold">
-        <table>
-          <thead>
-            <tr>
-              <th class="p-2 text-center" style="width: 4%;">
-                <input type="checkbox" id="headerCheckbox" class="rounded cursor-pointer">
-              </th>
-              <th class="p-2 text-center" style="width: 5%;">No.</th>
-              <th class="p-2 text-left" style="width: 45%;">Hirarki & Uraian Kegiatan</th>
-              <th class="p-2 text-right" style="width: 17%;">Anggaran (Total & Tahap)</th>
-              <th class="p-2 text-center bg-slate-900" style="width: 14%;">Switch Status</th>
-              <th class="p-2 text-left" style="width: 15%;">Catatan / Keterangan</th>
-            </tr>
-          </thead>
-        </table>
-      </div>
-
-      <!-- Table Body (Scrolls ONLY vertically, 100% width, NO horizontal scroll) -->
-      <div class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <table class="divide-y divide-slate-200 text-xs">
-          <tbody id="tableBody">
-            <!-- Rows injected by app.js -->
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Bottom Status Bar -->
-      <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
-        <div class="flex items-center gap-2">
-          <span>💡 Tekan <kbd class="bg-white border border-slate-300 px-1.5 py-0.2 rounded font-mono font-bold text-slate-700">Spasi</kbd> untuk switch status baris aktif & otomatis turun ke baris berikutnya.</span>
+    <!-- 4. TABLE VIEWPORT (1 Screen Height, 100% Width, Zero Horizontal Scroll) -->
+    <main class="table-viewport">
+      <div class="table-card">
+        
+        <!-- Fixed Header -->
+        <div class="table-header-wrap">
+          <table>
+            <thead>
+              <tr style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">
+                <th class="col-check"><input type="checkbox" id="headerCheckbox" style="cursor: pointer;"></th>
+                <th class="col-no">No.</th>
+                <th class="col-desc">Hirarki & Uraian Kegiatan RKAS</th>
+                <th class="col-amt">Anggaran (Pagu & Tahap)</th>
+                <th class="col-btn" style="background: #0f172a;">1 Tombol Switch</th>
+                <th class="col-note">Catatan / Keterangan</th>
+              </tr>
+            </thead>
+          </table>
         </div>
-        <div class="flex items-center gap-1.5 text-emerald-700 font-medium">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Auto-Save Aktif</span>
-        </div>
-      </div>
 
-    </div>
-  </main>
+        <!-- Scrollable Body (Vertical Only) -->
+        <div class="table-body-wrap" id="tableBodyWrap">
+          <table>
+            <tbody id="tableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Card Footer -->
+        <footer class="app-footer">
+          <div>
+            💡 Tekan <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 1px 5px; border-radius: 4px; font-weight: bold; color: #1e293b;">Spasi</kbd> untuk switch status baris aktif & otomatis loncat ke baris berikutnya.
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px; color: var(--color-done); font-weight: 500;">
+            <span class="pulse-dot"></span>
+            <span>Auto-Save Aktif</span>
+          </div>
+        </footer>
+
+      </div>
+    </main>
+
+  </div>
 
   <!-- MODAL KEYBOARD HELP -->
-  <div id="modalKeyboard" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-        <h3 class="font-bold text-slate-800 flex items-center gap-1.5 text-sm">
-          <i class="ph-bold ph-keyboard text-indigo-600"></i> Pintasan Keyboard Cepat
-        </h3>
-        <button onclick="toggleKeyboardModal(false)" class="text-slate-400 hover:text-slate-600 text-base">✕</button>
+  <div id="modalKeyboard" class="modal-overlay">
+    <div class="modal-box">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <strong style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+          ⌨️ Pintasan Keyboard Kilat
+        </strong>
+        <button onclick="toggleKeyboardModal(false)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted);">✕</button>
       </div>
-      <div class="py-3 space-y-2 text-xs">
-        <div class="flex items-center justify-between bg-indigo-50 p-2 rounded-md border border-indigo-100">
-          <span class="font-semibold text-indigo-900">Switch Status & Pindah ke Bawah</span>
-          <kbd class="px-2 py-0.5 bg-white border border-indigo-300 rounded font-bold text-indigo-700">Spasi / Enter</kbd>
+      <div style="padding: 12px 0; font-size: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #e0e7ff; padding: 6px 10px; border-radius: 6px;">
+          <strong style="color: #312e81;">Switch Status & Lanjut ke Bawah</strong>
+          <kbd style="background: white; border: 1px solid #c7d2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #3730a3;">Spasi / Enter</kbd>
         </div>
-        <div class="flex items-center justify-between bg-slate-50 p-1.5 rounded-md">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 5px 8px; border-radius: 6px;">
           <span>Langsung Terlaksana</span>
-          <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-bold text-emerald-600">1</kbd>
+          <kbd style="background: white; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: var(--color-done);">1</kbd>
         </div>
-        <div class="flex items-center justify-between bg-slate-50 p-1.5 rounded-md">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 5px 8px; border-radius: 6px;">
           <span>Langsung Tidak Terlaksana</span>
-          <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-bold text-rose-600">2</kbd>
+          <kbd style="background: white; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: var(--color-cancel);">2</kbd>
         </div>
-        <div class="flex items-center justify-between bg-slate-50 p-1.5 rounded-md">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 5px 8px; border-radius: 6px;">
           <span>Langsung Belum Terlaksana</span>
-          <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-bold text-amber-600">3</kbd>
+          <kbd style="background: white; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: var(--color-pending);">3</kbd>
         </div>
-        <div class="flex items-center justify-between bg-slate-50 p-1.5 rounded-md">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 5px 8px; border-radius: 6px;">
           <span>Pindah Baris Bawah / Atas</span>
-          <kbd class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-bold text-slate-700">↓ / ↑</kbd>
+          <kbd style="background: white; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #475569;">↓ / ↑</kbd>
         </div>
       </div>
-      <div class="pt-2 border-t border-slate-100 text-right">
-        <button onclick="toggleKeyboardModal(false)" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-md font-medium">Mengerti</button>
+      <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 8px;">
+        <button onclick="toggleKeyboardModal(false)" class="btn-nav" style="background: var(--accent); color: white; border: none; padding: 4px 12px;">Tutup</button>
       </div>
     </div>
   </div>
 
-  <!-- LOAD INITIAL DATA -->
+  <!-- SCRIPTS -->
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

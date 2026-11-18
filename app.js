@@ -19,12 +19,11 @@ function loadData() {
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Merge with initial data to preserve levels
         rkasData = INITIAL_RKAS_DATA.map(initItem => {
           const found = parsed.find(p => p.no === initItem.no);
           return {
             ...initItem,
-            status: found ? found.status : '',
+            status: found ? (found.status || '') : '',
             keterangan: found ? (found.keterangan || '') : ''
           };
         });
@@ -98,8 +97,8 @@ function setupEventListeners() {
 
 function toggleKeyboardModal(show) {
   const modal = document.getElementById('modalKeyboard');
-  if (show) modal.classList.remove('hidden');
-  else modal.classList.add('hidden');
+  if (show) modal.classList.add('open');
+  else modal.classList.remove('open');
 }
 
 // Filter Logic
@@ -110,23 +109,19 @@ function applyFilters() {
   const sts = document.getElementById('filterStatus').value;
 
   filteredData = rkasData.filter(item => {
-    // Search query
     if (q) {
       const matchText = (item.uraian || '') + ' ' + (item.kode_rekening || '') + ' ' + (item.kode_program || '') + ' ' + (item.no || '');
       if (!matchText.toLowerCase().includes(q)) return false;
     }
 
-    // Standar filter
     if (std !== 'ALL') {
       const prog = item.kode_program || '';
       if (!prog.startsWith(std)) return false;
     }
 
-    // Tahap filter
     if (thp === 'T1' && (!item.tahap_1 || item.tahap_1 <= 0)) return false;
     if (thp === 'T2' && (!item.tahap_2 || item.tahap_2 <= 0)) return false;
 
-    // Status filter (only applies strictly to level 4 items, but keep parent headers if any child matches)
     if (sts === 'UNCHECKED' && item.status) return false;
     if (sts !== 'ALL' && sts !== 'UNCHECKED' && item.status !== sts) return false;
 
@@ -158,7 +153,7 @@ function cycleStatus(no, autoNext = false) {
   setItemStatus(no, nextStatus, autoNext);
 }
 
-// Set Status for 1 Item
+// High-Performance In-Place DOM Update
 function setItemStatus(no, status, autoNext = false) {
   const target = rkasData.find(x => x.no === no);
   if (!target) return;
@@ -170,10 +165,21 @@ function setItemStatus(no, status, autoNext = false) {
     filteredData[fIdx].status = status;
   }
 
-  renderTable();
+  // Fast In-Place DOM update without rebuilding 473 rows!
+  const rowEl = document.getElementById('row-' + no);
+  if (rowEl) {
+    rowEl.classList.remove('status-done', 'status-cancel', 'status-pending');
+    if (status === 'Terlaksana') rowEl.classList.add('status-done');
+    else if (status === 'Tidak Terlaksana') rowEl.classList.add('status-cancel');
+    else if (status === 'Belum Terlaksana') rowEl.classList.add('status-pending');
+
+    const btn = rowEl.querySelector('.switch-btn');
+    if (btn) {
+      btn.outerHTML = renderSwitchButtonHtml(target);
+    }
+  }
 
   if (autoNext && fIdx !== -1) {
-    // Jump to next level 4 item
     for (let i = fIdx + 1; i < filteredData.length; i++) {
       if (filteredData[i].level === 4) {
         setActiveRow(i);
@@ -183,20 +189,59 @@ function setItemStatus(no, status, autoNext = false) {
   }
 }
 
+function renderSwitchButtonHtml(item) {
+  if (item.status === 'Terlaksana') {
+    return `
+      <button onclick="event.stopPropagation(); cycleStatus(${item.no})" class="switch-btn state-done" title="Klik untuk beralih status">
+        <span style="display: flex; align-items: center; gap: 4px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: white;"></span>
+          Terlaksana
+        </span>
+        <span class="switch-tag">Switch ⇄</span>
+      </button>
+    `;
+  } else if (item.status === 'Tidak Terlaksana') {
+    return `
+      <button onclick="event.stopPropagation(); cycleStatus(${item.no})" class="switch-btn state-cancel" title="Klik untuk beralih status">
+        <span style="display: flex; align-items: center; gap: 4px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: white;"></span>
+          Tidak
+        </span>
+        <span class="switch-tag">Switch ⇄</span>
+      </button>
+    `;
+  } else if (item.status === 'Belum Terlaksana') {
+    return `
+      <button onclick="event.stopPropagation(); cycleStatus(${item.no})" class="switch-btn state-pending" title="Klik untuk beralih status">
+        <span style="display: flex; align-items: center; gap: 4px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: white;"></span>
+          Belum
+        </span>
+        <span class="switch-tag">Switch ⇄</span>
+      </button>
+    `;
+  } else {
+    return `
+      <button onclick="event.stopPropagation(); cycleStatus(${item.no})" class="switch-btn state-empty" title="Klik untuk tandai Terlaksana">
+        <span style="opacity: 0.7;">Pilih Status</span>
+        <span class="switch-tag">Switch ⇄</span>
+      </button>
+    `;
+  }
+}
+
 // Helper: Mark all level 4 items under a sub-kegiatan as Terlaksana
 function markSubkegiatanStatus(kodeProgramPrefix, status) {
-  let count = 0;
   rkasData.forEach(item => {
     if (item.level === 4 && item.kode_program.startsWith(kodeProgramPrefix)) {
       item.status = status;
-      count++;
     }
   });
   saveData();
   applyFilters();
 }
 
-// Render Table matching 6 Fixed Columns
+// Render Table matching Exact 6 Columns
 function renderTable() {
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
@@ -204,9 +249,8 @@ function renderTable() {
   if (filteredData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="p-8 text-center text-slate-400">
-          <i class="ph-bold ph-files text-3xl mb-1 block"></i>
-          Tidak ada data kegiatan yang cocok dengan filter pencarian.
+        <td colspan="6" style="padding: 32px; text-align: center; color: var(--text-muted);">
+          Tidak ada data kegiatan yang cocok dengan filter.
         </td>
       </tr>
     `;
@@ -223,31 +267,25 @@ function renderTable() {
 
     const isSelected = selectedIndices.has(item.no);
     const isActive = activeRowIndex === fIdx;
-
-    // --- LEVEL STYLING ---
     const lvl = item.level || (item.is_header ? 1 : 4);
 
     if (lvl === 1) {
-      // LEVEL 1: STANDAR (Bold Navy Bar)
-      tr.className = `bg-indigo-950 text-white font-bold border-t-2 border-indigo-700`;
+      // LEVEL 1: STANDAR (Deep Navy)
+      tr.className = 'row-l1';
       tr.innerHTML = `
-        <td class="p-2 text-center" style="width: 4%;">
-          <span class="text-indigo-400 text-xs font-mono">•</span>
-        </td>
-        <td class="p-2 text-center text-indigo-300 font-mono text-xs" style="width: 5%;">${item.no}</td>
-        <td class="p-2" style="width: 45%;">
-          <div class="flex items-center gap-2">
-            <span class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-wider shrink-0">STANDAR</span>
-            <span class="text-xs uppercase tracking-wide text-yellow-300">${escapeHtml(item.uraian)}</span>
+        <td class="col-check" style="opacity: 0.5;">•</td>
+        <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
+        <td class="col-desc">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: var(--accent); color: white; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">STANDAR</span>
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: #fde047;">${escapeHtml(item.uraian)}</span>
           </div>
         </td>
-        <td class="p-2 text-right font-mono text-indigo-200 text-xs font-bold" style="width: 17%;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #e2e8f0;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="p-2 text-center text-indigo-300 text-[11px]" style="width: 14%;">
-          <span class="bg-indigo-900/80 px-2 py-0.5 rounded text-[10px]">Alokasi Standar</span>
-        </td>
-        <td class="p-2 text-indigo-400 text-[10px] italic" style="width: 15%;">
+        <td class="col-btn" style="opacity: 0.7; font-size: 10px;">Pagu Standar</td>
+        <td class="col-note" style="font-size: 10px; opacity: 0.6; font-style: italic;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -256,24 +294,22 @@ function renderTable() {
     }
 
     if (lvl === 2) {
-      // LEVEL 2: PROGRAM (Soft Emerald Bar)
-      tr.className = `bg-emerald-50/90 text-emerald-950 font-bold border-l-4 border-emerald-600 border-t border-emerald-200`;
+      // LEVEL 2: PROGRAM (Soft Emerald)
+      tr.className = 'row-l2';
       tr.innerHTML = `
-        <td class="p-2 text-center" style="width: 4%;"></td>
-        <td class="p-2 text-center text-emerald-700 font-mono text-xs" style="width: 5%;">${item.no}</td>
-        <td class="p-2" style="width: 45%;">
-          <div class="flex items-center gap-2 pl-3">
-            <span class="bg-emerald-200 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">PROGRAM</span>
-            <span class="text-xs text-emerald-900">${escapeHtml(item.uraian)}</span>
+        <td class="col-check"></td>
+        <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
+        <td class="col-desc">
+          <div style="display: flex; align-items: center; gap: 6px; padding-left: 10px;">
+            <span style="background: #a7f3d0; color: #065f46; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;">PROGRAM</span>
+            <span style="font-size: 12px; color: #064e3b;">${escapeHtml(item.uraian)}</span>
           </div>
         </td>
-        <td class="p-2 text-right font-mono text-emerald-800 text-xs font-semibold" style="width: 17%;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #065f46;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="p-2 text-center text-emerald-700 text-[11px]" style="width: 14%;">
-          <span class="bg-emerald-100/80 px-2 py-0.5 rounded text-[10px]">Alokasi Program</span>
-        </td>
-        <td class="p-2 text-emerald-600 text-[10px]" style="width: 15%;">
+        <td class="col-btn" style="font-size: 10px; color: #047857;">Pagu Program</td>
+        <td class="col-note" style="font-size: 10px; color: #059669;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -282,31 +318,29 @@ function renderTable() {
     }
 
     if (lvl === 3) {
-      // LEVEL 3: KEGIATAN / SUB-KEGIATAN (Soft Amber Bar)
-      tr.className = `bg-amber-50/80 text-amber-950 font-semibold border-l-4 border-amber-400 border-t border-amber-200`;
+      // LEVEL 3: KEGIATAN (Soft Amber)
+      tr.className = 'row-l3';
       tr.innerHTML = `
-        <td class="p-2 text-center" style="width: 4%;"></td>
-        <td class="p-2 text-center text-amber-700 font-mono text-xs" style="width: 5%;">${item.no}</td>
-        <td class="p-2" style="width: 45%;">
-          <div class="flex items-center justify-between gap-2 pl-6">
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="bg-amber-200 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">KEGIATAN</span>
-              <span class="text-xs text-amber-950 truncate">${escapeHtml(item.uraian)}</span>
+        <td class="col-check"></td>
+        <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
+        <td class="col-desc">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 20px;">
+            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+              <span style="background: #fde68a; color: #92400e; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; flex-shrink: 0;">KEGIATAN</span>
+              <span style="font-size: 11px; color: #78350f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.uraian)}</span>
             </div>
             <button onclick="markSubkegiatanStatus('${item.kode_program}', 'Terlaksana')" 
-              class="shrink-0 text-[10px] bg-amber-200/80 hover:bg-emerald-200 text-amber-900 hover:text-emerald-900 px-1.5 py-0.5 rounded transition font-medium"
-              title="Tandai semua item rincian di bawah sub-kegiatan ini menjadi Terlaksana">
+              style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; flex-shrink: 0;"
+              title="Tandai semua item rincian di bawah sub-kegiatan ini">
               ⚡ Semua Terlaksana
             </button>
           </div>
         </td>
-        <td class="p-2 text-right font-mono text-amber-900 text-xs font-semibold" style="width: 17%;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #92400e;">
           ${formatRp(item.jumlah)}
         </td>
-        <td class="p-2 text-center text-amber-800 text-[11px]" style="width: 14%;">
-          <span class="bg-amber-100 px-2 py-0.5 rounded text-[10px]">Sub-Total Kegiatan</span>
-        </td>
-        <td class="p-2 text-amber-700 text-[10px]" style="width: 15%;">
+        <td class="col-btn" style="font-size: 10px; color: #b45309;">Sub-Total</td>
+        <td class="col-note" style="font-size: 10px; color: #d97706;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -314,147 +348,55 @@ function renderTable() {
       return;
     }
 
-    // LEVEL 4: ITEM BELANJA / RINCIAN KEGIATAN (The Verifiable Item)
-    let rowBg = 'hover:bg-slate-50 transition-colors bg-white';
-    if (item.status === 'Terlaksana') {
-      rowBg = 'bg-emerald-50/40 hover:bg-emerald-50';
-    } else if (item.status === 'Tidak Terlaksana') {
-      rowBg = 'bg-rose-50/40 hover:bg-rose-50';
-    } else if (item.status === 'Belum Terlaksana') {
-      rowBg = 'bg-amber-50/40 hover:bg-amber-50';
-    }
+    // LEVEL 4: ITEM BELANJA
+    let statusClass = '';
+    if (item.status === 'Terlaksana') statusClass = 'status-done';
+    else if (item.status === 'Tidak Terlaksana') statusClass = 'status-cancel';
+    else if (item.status === 'Belum Terlaksana') statusClass = 'status-pending';
 
-    if (isActive) rowBg += ' active-row';
-    tr.className = `${rowBg} cursor-pointer border-b border-slate-100`;
-
+    tr.className = `row-l4 ${statusClass} ${isActive ? 'row-active' : ''}`;
     tr.addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       setActiveRow(fIdx);
     });
 
-    // Col 1: Checkbox (4%)
-    const tdCheck = document.createElement('td');
-    tdCheck.className = 'p-2 text-center';
-    tdCheck.style.width = '4%';
-    tdCheck.innerHTML = `<input type="checkbox" ${isSelected ? 'checked' : ''} class="rounded text-indigo-600 cursor-pointer" onclick="event.stopPropagation(); toggleSelect(${item.no})">`;
-    tr.appendChild(tdCheck);
-
-    // Col 2: No (5%)
-    const tdNo = document.createElement('td');
-    tdNo.className = 'p-2 text-center font-mono text-slate-400 text-xs';
-    tdNo.style.width = '5%';
-    tdNo.textContent = item.no;
-    tr.appendChild(tdNo);
-
-    // Col 3: Hirarki & Uraian Kegiatan (45%)
-    const tdUraian = document.createElement('td');
-    tdUraian.className = 'p-2';
-    tdUraian.style.width = '45%';
-
     const volTarifStr = item.volume ? `${formatNum(item.volume)} ${item.satuan} @ Rp ${formatNum(item.tarif_harga)}` : '';
     const rekStr = item.kode_rekening ? `Rek: ${item.kode_rekening}` : '';
 
-    tdUraian.innerHTML = `
-      <div class="pl-8 flex items-start gap-1.5">
-        <span class="text-slate-400 font-mono text-xs select-none shrink-0 mt-0.5">↳</span>
-        <div class="min-w-0 flex-1">
-          <div class="text-xs font-medium text-slate-800 leading-snug break-words">${escapeHtml(item.uraian)}</div>
-          <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-mono flex-wrap">
-            ${rekStr ? `<span class="bg-slate-100 px-1 py-0.2 rounded border border-slate-200">${rekStr}</span>` : ''}
-            ${volTarifStr ? `<span>${volTarifStr}</span>` : ''}
+    tr.innerHTML = `
+      <td class="col-check">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor: pointer;" onclick="event.stopPropagation(); toggleSelect(${item.no})">
+      </td>
+      <td class="col-no" style="font-family: monospace; color: var(--text-muted); font-size: 11px;">${item.no}</td>
+      <td class="col-desc">
+        <div style="padding-left: 28px; display: flex; align-items: flex-start; gap: 6px;">
+          <span style="color: #94a3b8; font-family: monospace; user-select: none; margin-top: 1px;">↳</span>
+          <div style="min-width: 0; flex: 1;">
+            <div style="font-size: 11px; font-weight: 500; color: #1e293b; line-height: 1.35; word-break: break-word;">${escapeHtml(item.uraian)}</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 9px; font-family: monospace; color: var(--text-muted);">
+              ${rekStr ? `<span style="background: #f1f5f9; padding: 1px 4px; border-radius: 3px; border: 1px solid #e2e8f0;">${rekStr}</span>` : ''}
+              ${volTarifStr ? `<span>${volTarifStr}</span>` : ''}
+            </div>
           </div>
         </div>
-      </div>
+      </td>
+      <td class="col-amt">
+        <div style="font-size: 11px; font-weight: 700; color: #0f172a; font-family: monospace;">${formatRp(item.jumlah)}</div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 2px; font-size: 9px; font-family: monospace;">
+          ${item.tahap_1 > 0 ? `<span style="background: #e0e7ff; color: #3730a3; padding: 1px 4px; border-radius: 3px;">T1: ${formatRp(item.tahap_1)}</span>` : ''}
+          ${item.tahap_2 > 0 ? `<span style="background: #f3e8ff; color: #6b21a8; padding: 1px 4px; border-radius: 3px;">T2: ${formatRp(item.tahap_2)}</span>` : ''}
+        </div>
+      </td>
+      <td class="col-btn">
+        ${renderSwitchButtonHtml(item)}
+      </td>
+      <td class="col-note">
+        <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan..."
+          class="input-search" style="width: 100%; font-size: 10px; padding: 2px 6px;"
+          onchange="updateItemKeterangan(${item.no}, this.value)"
+          onclick="event.stopPropagation()">
+      </td>
     `;
-    tr.appendChild(tdUraian);
-
-    // Col 4: Anggaran Total & Tahap (17%)
-    const tdAnggaran = document.createElement('td');
-    tdAnggaran.className = 'p-2 text-right font-mono';
-    tdAnggaran.style.width = '17%';
-    tdAnggaran.innerHTML = `
-      <div class="text-xs font-bold text-slate-800">${formatRp(item.jumlah)}</div>
-      <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px]">
-        ${item.tahap_1 > 0 ? `<span class="bg-indigo-50 text-indigo-700 px-1 rounded border border-indigo-200">T1: ${formatRp(item.tahap_1)}</span>` : ''}
-        ${item.tahap_2 > 0 ? `<span class="bg-purple-50 text-purple-700 px-1 rounded border border-purple-200">T2: ${formatRp(item.tahap_2)}</span>` : ''}
-      </div>
-    `;
-    tr.appendChild(tdAnggaran);
-
-    // Col 5: SINGLE SWITCH BUTTON (14%)
-    const tdStatus = document.createElement('td');
-    tdStatus.className = 'p-2 text-center whitespace-nowrap';
-    tdStatus.style.width = '14%';
-
-    let switchBtnHtml = '';
-    if (item.status === 'Terlaksana') {
-      switchBtnHtml = `
-        <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
-          title="Klik untuk beralih status">
-          <span class="flex items-center gap-1 truncate">
-            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
-            Terlaksana
-          </span>
-          <span class="text-[9px] bg-emerald-700/80 px-1 py-0.2 rounded font-mono text-emerald-100 shrink-0">
-            Switch ⇄
-          </span>
-        </button>
-      `;
-    } else if (item.status === 'Tidak Terlaksana') {
-      switchBtnHtml = `
-        <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
-          title="Klik untuk beralih status">
-          <span class="flex items-center gap-1 truncate">
-            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
-            Tidak
-          </span>
-          <span class="text-[9px] bg-rose-700/80 px-1 py-0.2 rounded font-mono text-rose-100 shrink-0">
-            Switch ⇄
-          </span>
-        </button>
-      `;
-    } else if (item.status === 'Belum Terlaksana') {
-      switchBtnHtml = `
-        <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
-          title="Klik untuk beralih status">
-          <span class="flex items-center gap-1 truncate">
-            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
-            Belum
-          </span>
-          <span class="text-[9px] bg-amber-600/80 px-1 py-0.2 rounded font-mono text-amber-100 shrink-0">
-            Switch ⇄
-          </span>
-        </button>
-      `;
-    } else {
-      switchBtnHtml = `
-        <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-full py-1 px-2 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 border border-slate-300 shadow-2xs flex items-center justify-between gap-1 transition active:scale-95"
-          title="Klik untuk tandai Terlaksana">
-          <span class="text-slate-400 truncate">Pilih Status</span>
-          <span class="text-[9px] bg-slate-200 px-1 py-0.2 rounded font-mono text-slate-600 shrink-0">
-            Switch ⇄
-          </span>
-        </button>
-      `;
-    }
-    tdStatus.innerHTML = switchBtnHtml;
-    tr.appendChild(tdStatus);
-
-    // Col 6: Catatan / Keterangan (15%)
-    const tdKet = document.createElement('td');
-    tdKet.className = 'p-2';
-    tdKet.style.width = '15%';
-    tdKet.innerHTML = `
-      <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan..."
-        class="w-full text-[11px] px-2 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-transparent hover:bg-white truncate"
-        onchange="updateItemKeterangan(${item.no}, this.value)"
-        onclick="event.stopPropagation()">
-    `;
-    tr.appendChild(tdKet);
 
     fragment.appendChild(tr);
   });
@@ -488,10 +430,10 @@ function setActiveRow(index) {
 
   document.querySelectorAll('#tableBody tr').forEach((tr, i) => {
     if (i === index) {
-      tr.classList.add('active-row');
+      tr.classList.add('row-active');
       tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
-      tr.classList.remove('active-row');
+      tr.classList.remove('row-active');
     }
   });
 }
@@ -531,7 +473,6 @@ function handleKeyNavigation(e) {
     }
   }
 
-  // Navigation Arrow Down / Up
   if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'j') {
     e.preventDefault();
     for (let i = activeRowIndex + 1; i < filteredData.length; i++) {
@@ -640,7 +581,7 @@ function updateStats() {
   document.getElementById('barPending').style.width = pPending + '%';
   document.getElementById('barCancel').style.width = pCancel + '%';
   document.getElementById('statProgressPct').textContent = `${pTotal}%`;
-  document.getElementById('statProgressDetail').textContent = `(${checkedCount}/${totalItems} item)`;
+  document.getElementById('statProgressDetail').textContent = `(${checkedCount}/${totalItems})`;
 }
 
 function renderAll() {
