@@ -1,6 +1,6 @@
 /* ==========================================================================
    ULTRA-LIGHTWEIGHT, SILKY SMOOTH STYLES FOR RKAS VERIFIKASI 2026
-   Zero-framework, 100% Native CSS, < 8KB, 60fps Hardware-Accelerated
+   Zero-framework, 100% Native CSS, < 10KB, 60fps Hardware-Accelerated
    ========================================================================== */
 
 :root {
@@ -201,6 +201,53 @@ html, body {
   box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
 }
 
+/* BATCH NOTE COMPONENT */
+.batch-note-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  padding: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-batch-action {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.btn-batch-action:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.btn-batch-action:active {
+  transform: scale(0.96);
+}
+
+.btn-batch-primary {
+  background: #4f46e5;
+  border-color: #4338ca;
+  color: #ffffff;
+}
+
+.btn-batch-primary:hover {
+  background: #4338ca;
+  color: #ffffff;
+}
+
 /* TABLE CONTAINER - STRICT 100% NO HORIZONTAL SCROLL */
 .table-viewport {
   flex: 1;
@@ -249,10 +296,10 @@ th, td {
 /* Column Width Percentages (Strict 100% total) */
 .col-check { width: 3.5%; text-align: center; }
 .col-no    { width: 4.5%; text-align: center; }
-.col-desc  { width: 45%; }
+.col-desc  { width: 44%; }
 .col-amt   { width: 17%; text-align: right; }
-.col-btn   { width: 15%; text-align: center; }
-.col-note  { width: 15%; }
+.col-btn   { width: 14%; text-align: center; }
+.col-note  { width: 17%; }
 
 /* HIERARCHY LEVEL ROWS */
 .row-l1 {
@@ -408,7 +455,7 @@ th, td {
 .modal-box {
   background: #ffffff;
   border-radius: 12px;
-  max-width: 380px;
+  max-width: 400px;
   width: 90%;
   padding: 20px;
   box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);

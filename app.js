@@ -57,6 +57,15 @@ function formatNum(val) {
   return Number(val).toLocaleString('id-ID');
 }
 
+function getTodayFormatted() {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
 // Setup Event Listeners
 function setupEventListeners() {
   document.getElementById('searchInput').addEventListener('input', applyFilters);
@@ -110,7 +119,7 @@ function applyFilters() {
 
   filteredData = rkasData.filter(item => {
     if (q) {
-      const matchText = (item.uraian || '') + ' ' + (item.kode_rekening || '') + ' ' + (item.kode_program || '') + ' ' + (item.no || '');
+      const matchText = (item.uraian || '') + ' ' + (item.kode_rekening || '') + ' ' + (item.kode_program || '') + ' ' + (item.no || '') + ' ' + (item.keterangan || '');
       if (!matchText.toLowerCase().includes(q)) return false;
     }
 
@@ -153,7 +162,7 @@ function cycleStatus(no, autoNext = false) {
   setItemStatus(no, nextStatus, autoNext);
 }
 
-// High-Performance In-Place DOM Update
+// In-Place DOM Update for Speed & Smooth 60fps
 function setItemStatus(no, status, autoNext = false) {
   const target = rkasData.find(x => x.no === no);
   if (!target) return;
@@ -165,7 +174,6 @@ function setItemStatus(no, status, autoNext = false) {
     filteredData[fIdx].status = status;
   }
 
-  // Fast In-Place DOM update without rebuilding 473 rows!
   const rowEl = document.getElementById('row-' + no);
   if (rowEl) {
     rowEl.classList.remove('status-done', 'status-cancel', 'status-pending');
@@ -230,7 +238,77 @@ function renderSwitchButtonHtml(item) {
   }
 }
 
-// Helper: Mark all level 4 items under a sub-kegiatan as Terlaksana
+// BATCH NOTES & DATE TOOLS
+function setBatchNoteDateToday() {
+  const input = document.getElementById('batchNoteInput');
+  input.value = `Tgl: ${getTodayFormatted()}`;
+  input.focus();
+}
+
+function applyBatchNote() {
+  const noteVal = document.getElementById('batchNoteInput').value.trim();
+  if (!noteVal) {
+    alert('Silakan ketik teks catatan atau tanggal terlebih dahulu pada kotak Catatan Massal!');
+    document.getElementById('batchNoteInput').focus();
+    return;
+  }
+
+  if (selectedIndices.size === 0) {
+    alert('Silakan centang (pilih) minimal satu kegiatan terlebih dahulu!');
+    return;
+  }
+
+  let count = 0;
+  rkasData.forEach(item => {
+    if (selectedIndices.has(item.no) && item.level === 4) {
+      item.keterangan = noteVal;
+      count++;
+    }
+  });
+
+  saveData();
+  applyFilters();
+
+  // Visual notification
+  alert(`Berhasil mengisi catatan "${noteVal}" ke ${count} kegiatan terpilih!`);
+}
+
+function clearBatchNote() {
+  if (selectedIndices.size === 0) {
+    alert('Silakan centang kegiatan yang ingin dihapus catatannya!');
+    return;
+  }
+
+  if (confirm(`Hapus catatan pada ${selectedIndices.size} kegiatan terpilih?`)) {
+    rkasData.forEach(item => {
+      if (selectedIndices.has(item.no) && item.level === 4) {
+        item.keterangan = '';
+      }
+    });
+    saveData();
+    applyFilters();
+  }
+}
+
+// Set note for all items under a sub-kegiatan
+function promptSubkegiatanNote(kodeProgramPrefix, title) {
+  const defaultVal = `Tgl: ${getTodayFormatted()}`;
+  const note = prompt(`Masukkan catatan/tanggal untuk seluruh rincian kegiatan "${title}":`, defaultVal);
+  if (note === null) return; // user cancelled
+
+  let count = 0;
+  rkasData.forEach(item => {
+    if (item.level === 4 && item.kode_program.startsWith(kodeProgramPrefix)) {
+      item.keterangan = note;
+      count++;
+    }
+  });
+
+  saveData();
+  applyFilters();
+}
+
+// Mark all items under sub-kegiatan as Terlaksana
 function markSubkegiatanStatus(kodeProgramPrefix, status) {
   rkasData.forEach(item => {
     if (item.level === 4 && item.kode_program.startsWith(kodeProgramPrefix)) {
@@ -241,7 +319,7 @@ function markSubkegiatanStatus(kodeProgramPrefix, status) {
   applyFilters();
 }
 
-// Render Table matching Exact 6 Columns
+// Render Table
 function renderTable() {
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
@@ -324,16 +402,23 @@ function renderTable() {
         <td class="col-check"></td>
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
         <td class="col-desc">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-left: 20px;">
             <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
               <span style="background: #fde68a; color: #92400e; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; flex-shrink: 0;">KEGIATAN</span>
               <span style="font-size: 11px; color: #78350f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.uraian)}</span>
             </div>
-            <button onclick="markSubkegiatanStatus('${item.kode_program}', 'Terlaksana')" 
-              style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; flex-shrink: 0;"
-              title="Tandai semua item rincian di bawah sub-kegiatan ini">
-              ⚡ Semua Terlaksana
-            </button>
+            <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+              <button onclick="promptSubkegiatanNote('${item.kode_program}', '${escapeHtml(item.uraian)}')" 
+                class="btn-batch-action" style="padding: 1px 5px; font-size: 9px;"
+                title="Isi catatan/tanggal ke semua item rincian kegiatan ini">
+                📝 Catatan
+              </button>
+              <button onclick="markSubkegiatanStatus('${item.kode_program}', 'Terlaksana')" 
+                style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer;"
+                title="Tandai semua item rincian di bawah sub-kegiatan ini menjadi Terlaksana">
+                ⚡ Semua Terlaksana
+              </button>
+            </div>
           </div>
         </td>
         <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #92400e;">
@@ -391,7 +476,7 @@ function renderTable() {
         ${renderSwitchButtonHtml(item)}
       </td>
       <td class="col-note">
-        <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan..."
+        <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan/tanggal..."
           class="input-search" style="width: 100%; font-size: 10px; padding: 2px 6px;"
           onchange="updateItemKeterangan(${item.no}, this.value)"
           onclick="event.stopPropagation()">
@@ -528,7 +613,7 @@ function batchSetStatus(status) {
   }
 
   rkasData.forEach(item => {
-    if (selectedIndices.has(item.no)) {
+    if (selectedIndices.has(item.no) && item.level === 4) {
       item.status = status;
     }
   });
@@ -627,81 +712,191 @@ function handleRestoreJSON(e) {
   e.target.value = '';
 }
 
-// Export to Excel with SheetJS
+// PROFESSIONAL EXCEL EXPORT (High-Quality, Formatted, 2 Sheets)
 function exportToExcel() {
   if (typeof XLSX === 'undefined') {
     alert('Library Excel belum siap. Silakan periksa koneksi internet Anda atau refresh halaman.');
     return;
   }
 
-  const headers = [
-    "No.", "Level", "Kode Rekening", "Kode Program", "Uraian Kegiatan",
-    "Volume", "Satuan", "Tarif Harga (Rp)", "Jumlah (Rp)",
-    "Tahap 1 (Rp)", "Tahap 2 (Rp)", "Status Pelaksanaan", "Keterangan"
+  const wb = XLSX.utils.book_new();
+  const todayStr = getTodayFormatted();
+
+  // --- SHEET 1: DATA VERIFIKASI KEGIATAN RKAS ---
+  const sheetRows = [
+    ["LEMBAR VERIFIKASI PELAKSANAAN RENCANA KEGIATAN DAN ANGGARAN SEKOLAH (RKAS)"],
+    ["SMK NEGERI 4 SURAKARTA - TAHUN ANGGARAN 2026"],
+    [`NPSN: 20328152 | Sumber Dana: BOSP Reguler Rp 2.204.800.000 | Tanggal Verifikasi: ${todayStr}`],
+    [], // Blank separator row
+    [
+      "No.",
+      "Tingkat (Level)",
+      "Kode Rekening",
+      "Kode Program",
+      "Uraian / Rincian Kegiatan",
+      "Volume",
+      "Satuan",
+      "Tarif Satuan (Rp)",
+      "Jumlah Anggaran (Rp)",
+      "Tahap 1 (Rp)",
+      "Tahap 2 (Rp)",
+      "Status Pelaksanaan",
+      "Catatan / Tanggal Pelaksanaan"
+    ]
   ];
 
-  const rows = [headers];
-
   rkasData.forEach(item => {
-    rows.push([
+    let uraianFmt = item.uraian || '';
+    let lvlLabel = 'ITEM';
+
+    if (item.level === 1) {
+      lvlLabel = 'STANDAR';
+      uraianFmt = `[STANDAR] ${item.uraian.toUpperCase()}`;
+    } else if (item.level === 2) {
+      lvlLabel = 'PROGRAM';
+      uraianFmt = `   [PROGRAM] ${item.uraian}`;
+    } else if (item.level === 3) {
+      lvlLabel = 'KEGIATAN';
+      uraianFmt = `      [KEGIATAN] ${item.uraian}`;
+    } else {
+      lvlLabel = 'ITEM';
+      uraianFmt = `         ↳ ${item.uraian}`;
+    }
+
+    sheetRows.push([
       item.no,
-      item.level_name || '',
+      lvlLabel,
       item.kode_rekening || '',
       item.kode_program || '',
-      item.uraian || '',
+      uraianFmt,
       item.volume || '',
       item.satuan || '',
       item.tarif_harga || '',
       item.jumlah || 0,
       item.tahap_1 || 0,
       item.tahap_2 || 0,
-      item.status || '',
+      item.status || '(Belum diverifikasi)',
       item.keterangan || ''
     ]);
   });
 
-  const wb = XLSX.utils.book_new();
-  const wsData = XLSX.utils.aoa_to_sheet(rows);
+  const wsData = XLSX.utils.aoa_to_sheet(sheetRows);
 
+  // Set explicit column widths for clean reading
   wsData['!cols'] = [
-    { wch: 6 },
-    { wch: 12 },
-    { wch: 20 },
-    { wch: 14 },
-    { wch: 65 },
-    { wch: 10 },
-    { wch: 14 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 22 },
-    { wch: 35 }
+    { wch: 6 },   // No
+    { wch: 12 },  // Level
+    { wch: 22 },  // Kode Rekening
+    { wch: 14 },  // Kode Program
+    { wch: 70 },  // Uraian Kegiatan (Wide)
+    { wch: 10 },  // Vol
+    { wch: 14 },  // Satuan
+    { wch: 16 },  // Tarif
+    { wch: 18 },  // Jumlah
+    { wch: 16 },  // Tahap 1
+    { wch: 16 },  // Tahap 2
+    { wch: 22 },  // Status Pelaksanaan
+    { wch: 35 }   // Catatan / Tanggal
   ];
 
   XLSX.utils.book_append_sheet(wb, wsData, "Verifikasi Kegiatan");
 
-  const items = rkasData.filter(x => x.level === 4);
-  const calcSum = (status) => items.filter(x => x.status === status).reduce((acc, x) => acc + (x.jumlah || 0), 0);
-  const calcCount = (status) => items.filter(x => x.status === status).length;
+  // --- SHEET 2: REKAPITULASI REALISASI ANGGARAN & KEGIATAN ---
+  const level4Items = rkasData.filter(x => x.level === 4);
+  const totalItemCount = level4Items.length;
+  const totalAnggaran = level4Items.reduce((acc, x) => acc + (x.jumlah || 0), 0);
+
+  const calcSum = (st) => level4Items.filter(x => x.status === st).reduce((acc, x) => acc + (x.jumlah || 0), 0);
+  const calcCnt = (st) => level4Items.filter(x => x.status === st).length;
+
+  const cDone = calcCnt("Terlaksana");
+  const sDone = calcSum("Terlaksana");
+
+  const cCancel = calcCnt("Tidak Terlaksana");
+  const sCancel = calcSum("Tidak Terlaksana");
+
+  const cPending = calcCnt("Belum Terlaksana");
+  const sPending = calcSum("Belum Terlaksana");
+
+  const cUncheck = calcCnt("");
+  const sUncheck = calcSum("");
 
   const rekapRows = [
-    ["REKAPITULASI HASIL VERIFIKASI KEGIATAN RKAS 2026"],
-    ["SMK NEGERI 4 SURAKARTA"],
+    ["REKAPITULASI HASIL VERIFIKASI KEGIATAN & REALISASI ANGGARAN"],
+    ["SMK NEGERI 4 SURAKARTA - TAHUN ANGGARAN 2026"],
+    [`Tanggal Rekapitulasi: ${todayStr}`],
     [],
-    ["Status Pelaksanaan", "Jumlah Item", "Total Anggaran (Rp)", "Persentase Item (%)"],
-    ["Terlaksana", calcCount("Terlaksana"), calcSum("Terlaksana"), ((calcCount("Terlaksana") / items.length) * 100).toFixed(1) + "%"],
-    ["Tidak Terlaksana", calcCount("Tidak Terlaksana"), calcSum("Tidak Terlaksana"), ((calcCount("Tidak Terlaksana") / items.length) * 100).toFixed(1) + "%"],
-    ["Belum Terlaksana", calcCount("Belum Terlaksana"), calcSum("Belum Terlaksana"), ((calcCount("Belum Terlaksana") / items.length) * 100).toFixed(1) + "%"],
-    ["Belum Diverifikasi", calcCount(""), calcSum(""), ((calcCount("") / items.length) * 100).toFixed(1) + "%"],
+    [
+      "No.",
+      "Status Pelaksanaan",
+      "Jumlah Kegiatan (Item)",
+      "Persentase Kegiatan (%)",
+      "Total Anggaran (Rp)",
+      "Persentase Anggaran (%)",
+      "Keterangan Serapan"
+    ],
+    [
+      1,
+      "Terlaksana",
+      cDone,
+      ((cDone / totalItemCount) * 100).toFixed(1) + "%",
+      sDone,
+      ((sDone / totalAnggaran) * 100).toFixed(1) + "%",
+      "Terealisasi"
+    ],
+    [
+      2,
+      "Tidak Terlaksana",
+      cCancel,
+      ((cCancel / totalItemCount) * 100).toFixed(1) + "%",
+      sCancel,
+      ((sCancel / totalAnggaran) * 100).toFixed(1) + "%",
+      "Dibatalkan / Tidak Terserap"
+    ],
+    [
+      3,
+      "Belum Terlaksana",
+      cPending,
+      ((cPending / totalItemCount) * 100).toFixed(1) + "%",
+      sPending,
+      ((sPending / totalAnggaran) * 100).toFixed(1) + "%",
+      "Menunggu Jadwal Pelaksanaan"
+    ],
+    [
+      4,
+      "Belum Diverifikasi",
+      cUncheck,
+      ((cUncheck / totalItemCount) * 100).toFixed(1) + "%",
+      sUncheck,
+      ((sUncheck / totalAnggaran) * 100).toFixed(1) + "%",
+      "Belum Dilakukan Pengecekan"
+    ],
     [],
-    ["TOTAL ITEM KEGIATAN", items.length, items.reduce((acc, x) => acc + (x.jumlah || 0), 0), "100.0%"]
+    [
+      "",
+      "TOTAL KESELURUHAN",
+      totalItemCount,
+      "100.0%",
+      totalAnggaran,
+      "100.0%",
+      "Pagu Anggaran BOSP 2026"
+    ]
   ];
 
   const wsRekap = XLSX.utils.aoa_to_sheet(rekapRows);
-  wsRekap['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 22 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, wsRekap, "Rekapitulasi");
+  wsRekap['!cols'] = [
+    { wch: 6 },
+    { wch: 22 },
+    { wch: 22 },
+    { wch: 22 },
+    { wch: 24 },
+    { wch: 22 },
+    { wch: 30 }
+  ];
 
-  const today = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `Hasil_Verifikasi_RKAS_SMKN4_Surakarta_${today}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, wsRekap, "Rekapitulasi Anggaran");
+
+  // Write and trigger download
+  const dateFileStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `Verifikasi_RKAS_SMKN4_Surakarta_${dateFileStr}.xlsx`);
 }

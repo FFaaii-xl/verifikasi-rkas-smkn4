@@ -31,20 +31,20 @@
       <!-- Quick Action Buttons -->
       <div style="display: flex; align-items: center; gap: 6px;">
         <button id="btnKeyboardHelp" class="btn-nav" title="Pintasan Keyboard">
-          ⌨️ <span class="hide-mobile">Pintasan</span>
+          ⌨️ <span>Pintasan</span>
         </button>
 
         <button id="btnBackup" class="btn-nav" title="Cadangkan Data (JSON)">
-          💾 <span class="hide-mobile">Backup</span>
+          💾 <span>Backup</span>
         </button>
 
         <label class="btn-nav" style="cursor: pointer;" title="Pulihkan Data dari Cadangan">
-          📂 <span class="hide-mobile">Pulihkan</span>
+          📂 <span>Pulihkan</span>
           <input type="file" id="fileRestore" accept=".json" style="display: none;">
         </label>
 
-        <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx)">
-          📥 <span>Unduh Excel</span>
+        <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx) dengan Format Lengkap & Rapi">
+          📥 <span>Unduh Excel (.xlsx)</span>
         </button>
       </div>
     </header>
@@ -91,13 +91,13 @@
       </div>
     </section>
 
-    <!-- 3. COMPACT TOOLBAR -->
+    <!-- 3. COMPACT TOOLBAR (With Filters, Batch Status, AND Batch Notes / Dates) -->
     <section class="toolbar">
-      <!-- Search & Filters -->
-      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <input type="text" id="searchInput" placeholder="🔍 Cari nama kegiatan, rekening..." class="input-search" style="width: 200px;">
+      <!-- Search & Filters (Left) -->
+      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="🔍 Cari nama kegiatan, rekening..." class="input-search" style="width: 170px;">
 
-        <select id="filterStandar" class="select-filter" style="max-width: 170px;">
+        <select id="filterStandar" class="select-filter" style="max-width: 150px;">
           <option value="ALL">Semua Standar (8)</option>
           <option value="02.">02. Standar Isi</option>
           <option value="03.">03. Standar Proses</option>
@@ -127,25 +127,45 @@
         </span>
       </div>
 
-      <!-- Batch Actions -->
-      <div style="display: flex; align-items: center; gap: 6px;">
-        <button id="btnSelectAllVisible" style="background: transparent; border: none; color: var(--accent); font-weight: 600; font-size: 11px; cursor: pointer; padding: 2px 4px;">
-          ☑️ Pilih Semua (<span id="selectedCount">0</span>)
-        </button>
+      <!-- Batch Actions & Mass Notes (Right) -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        
+        <!-- Batch Status Selection -->
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <button id="btnSelectAllVisible" style="background: transparent; border: none; color: var(--accent); font-weight: 600; font-size: 11px; cursor: pointer; padding: 2px 4px;">
+            ☑️ Pilih Semua (<span id="selectedCount">0</span>)
+          </button>
+          <span style="color: #cbd5e1;">|</span>
+          <span style="font-size: 10px; color: var(--text-muted);">Status:</span>
+          <button onclick="batchSetStatus('Terlaksana')" class="badge-pill" style="background: var(--color-done-bg); color: var(--color-done); border-color: var(--color-done-border); cursor: pointer; padding: 2px 6px;">
+            🟢 Terlaksana
+          </button>
+          <button onclick="batchSetStatus('Tidak Terlaksana')" class="badge-pill" style="background: var(--color-cancel-bg); color: var(--color-cancel); border-color: var(--color-cancel-border); cursor: pointer; padding: 2px 6px;">
+            🔴 Tidak
+          </button>
+          <button onclick="batchSetStatus('Belum Terlaksana')" class="badge-pill" style="background: var(--color-pending-bg); color: var(--color-pending); border-color: var(--color-pending-border); cursor: pointer; padding: 2px 6px;">
+            🟡 Belum
+          </button>
+        </div>
+
         <span style="color: #cbd5e1;">|</span>
-        <span style="font-size: 11px; color: var(--text-muted);">Tandai:</span>
-        <button onclick="batchSetStatus('Terlaksana')" class="badge-pill" style="background: var(--color-done-bg); color: var(--color-done); border-color: var(--color-done-border); cursor: pointer; padding: 2px 6px;">
-          🟢 Terlaksana
-        </button>
-        <button onclick="batchSetStatus('Tidak Terlaksana')" class="badge-pill" style="background: var(--color-cancel-bg); color: var(--color-cancel); border-color: var(--color-cancel-border); cursor: pointer; padding: 2px 6px;">
-          🔴 Tidak
-        </button>
-        <button onclick="batchSetStatus('Belum Terlaksana')" class="badge-pill" style="background: var(--color-pending-bg); color: var(--color-pending); border-color: var(--color-pending-border); cursor: pointer; padding: 2px 6px;">
-          🟡 Belum
-        </button>
-        <button onclick="batchSetStatus('')" class="badge-pill" style="background: #e2e8f0; color: #475569; cursor: pointer; padding: 2px 6px;" title="Reset pilihan">
-          ✕
-        </button>
+
+        <!-- BATCH NOTE / TANGGAL MASSAL TOOL -->
+        <div class="batch-note-group" title="Isi catatan atau tanggal sekaligus untuk semua baris yang dicentang">
+          <input type="text" id="batchNoteInput" placeholder="Catatan/tanggal massal..." 
+            style="border: none; outline: none; font-size: 11px; width: 140px; padding: 2px 4px;">
+          
+          <button onclick="setBatchNoteDateToday()" class="btn-batch-action" title="Gunakan Tanggal Hari Ini">
+            📅 Hari Ini
+          </button>
+          <button onclick="applyBatchNote()" class="btn-batch-action btn-batch-primary" title="Terapkan teks catatan ini ke seluruh kegiatan yang dicentang">
+            ⚡ Terapkan Catatan
+          </button>
+          <button onclick="clearBatchNote()" class="btn-batch-action" title="Hapus catatan pada baris terpilih" style="color: #94a3b8;">
+            ✕
+          </button>
+        </div>
+
       </div>
     </section>
 
@@ -163,7 +183,7 @@
                 <th class="col-desc">Hirarki & Uraian Kegiatan RKAS</th>
                 <th class="col-amt">Anggaran (Pagu & Tahap)</th>
                 <th class="col-btn" style="background: #0f172a;">1 Tombol Switch</th>
-                <th class="col-note">Catatan / Keterangan</th>
+                <th class="col-note">Catatan / Tanggal Pelaksanaan</th>
               </tr>
             </thead>
           </table>
@@ -181,7 +201,7 @@
         <!-- Card Footer -->
         <footer class="app-footer">
           <div>
-            💡 Tekan <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 1px 5px; border-radius: 4px; font-weight: bold; color: #1e293b;">Spasi</kbd> untuk switch status baris aktif & otomatis loncat ke baris berikutnya.
+            💡 <strong>Tips Efisien:</strong> Centang beberapa kegiatan (atau pilih standar), ketik tanggal/catatan di kotak atas, lalu klik <strong>⚡ Terapkan Catatan</strong>. Catatan akan langsung masuk ke semua kegiatan terpilih!
           </div>
           <div style="display: flex; align-items: center; gap: 5px; color: var(--color-done); font-weight: 500;">
             <span class="pulse-dot"></span>
