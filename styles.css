@@ -125,6 +125,24 @@ html, body {
   color: #ffffff;
 }
 
+.btn-cloud {
+  background: #f0fdf4;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.btn-cloud:hover {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.btn-cloud.connected {
+  background: #ecfdf5;
+  border-color: #34d399;
+  color: #047857;
+}
+
 /* STATS METRIC BAR */
 .stats-bar {
   background: #ffffff;

@@ -10,6 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- ExcelJS for themed workbook and embedded charts in sheet -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <!-- Supabase JS Client for Cloud Database Integration -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -36,14 +38,18 @@
           ⌨️ <span>Pintasan</span>
         </button>
 
-        <button id="btnBackup" class="btn-nav" title="Cadangkan Data (JSON)">
-          💾 <span>Backup</span>
+        <button id="btnBackup" class="btn-nav" title="Simpan / Download File Cadangan (.json)">
+          💾 <span>Simpan JSON</span>
         </button>
 
-        <label class="btn-nav" style="cursor: pointer;" title="Pulihkan Data dari Cadangan">
-          📂 <span>Pulihkan</span>
+        <label class="btn-nav" style="cursor: pointer;" title="Pulihkan / Upload Data dari File Cadangan (.json)">
+          📂 <span>Pulihkan JSON</span>
           <input type="file" id="fileRestore" accept=".json" style="display: none;">
         </label>
+
+        <button id="btnSupabaseModal" class="btn-nav btn-cloud" title="Hubungkan dan Sinkronkan dengan Supabase Cloud Database">
+          ☁️ <span id="cloudStatusText">Cloud Supabase</span>
+        </button>
 
         <button id="btnExportExcel" class="btn-nav btn-excel" title="Unduh Hasil Verifikasi ke Excel (.xlsx) dengan Sheet Grafik & Tema Ringan">
           📥 <span>Unduh Excel + Grafik</span>
@@ -255,6 +261,73 @@
       </div>
       <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 8px;">
         <button onclick="toggleKeyboardModal(false)" class="btn-nav" style="background: var(--accent); color: white; border: none; padding: 4px 12px;">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SUPABASE CLOUD SETUP -->
+  <div id="modalSupabase" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <strong style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+          ☁️ Sinkronisasi Supabase Cloud
+        </strong>
+        <button onclick="toggleSupabaseModal(false)" style="background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted);">✕</button>
+      </div>
+
+      <div style="padding: 12px 0; font-size: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Status Info Banner -->
+        <div id="supabaseStatusBanner" style="padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; border: 1px solid #cbd5e1;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span id="cloudStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+            <span id="cloudStatusDesc" style="font-weight: 600; color: #334155;">Belum Terhubung ke Cloud</span>
+          </div>
+          <span id="cloudLastSync" style="color: #64748b; font-size: 10px;">-</span>
+        </div>
+
+        <div>
+          <label style="font-weight: 600; display: block; margin-bottom: 3px; font-size: 11px;">URL Proyek Supabase:</label>
+          <input type="text" id="inputSupabaseUrl" value="https://vctllgknukpegpzklwiw.supabase.co" 
+                 class="input-search" style="width: 100%; font-family: monospace; font-size: 11px; padding: 6px 8px;">
+        </div>
+
+        <div>
+          <label style="font-weight: 600; display: block; margin-bottom: 3px; font-size: 11px;">
+            Supabase Public Anon Key:
+            <span style="font-weight: normal; color: var(--text-muted); font-size: 10px;">(Dapat disalin dari Supabase Dashboard > API Keys)</span>
+          </label>
+          <input type="password" id="inputSupabaseAnonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
+                 class="input-search" style="width: 100%; font-family: monospace; font-size: 11px; padding: 6px 8px;">
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <button id="btnConnectSupabase" class="btn-nav" style="flex: 1; justify-content: center; background: #059669; color: white; border: none; font-weight: 600;">
+            🔗 Hubungkan & Sinkronkan
+          </button>
+          <button id="btnPushToCloud" class="btn-nav" style="flex: 1; justify-content: center;" title="Unggah seluruh data lokal saat ini ke tabel Supabase">
+            ⬆️ Upload ke Cloud
+          </button>
+          <button id="btnPullFromCloud" class="btn-nav" style="flex: 1; justify-content: center;" title="Tarik data verifikasi terbaru yang tersimpan di Cloud">
+            ⬇️ Tarik dari Cloud
+          </button>
+        </div>
+
+        <!-- SQL Schema Guide -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-top: 4px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <strong style="font-size: 10px; color: #475569;">Tabel Database Supabase (`rkas_verifikasi`)</strong>
+            <button onclick="copySqlSchema()" class="btn-batch-action" style="font-size: 9px; padding: 1px 6px;">
+              📋 Salin SQL
+            </button>
+          </div>
+          <div style="font-size: 10px; color: #64748b; line-height: 1.4;">
+            File migrasi SQL sudah otomatis tersedia di folder repository <code>supabase/migrations/</code>. Jika tabel belum terbuat di Supabase, Anda dapat klik <strong>Salin SQL</strong> lalu tempel di menu <strong>SQL Editor</strong> di dashboard Supabase.
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 8px;">
+        <button onclick="toggleSupabaseModal(false)" class="btn-nav" style="background: #e2e8f0; color: #1e293b; border: none; padding: 4px 12px;">Tutup</button>
       </div>
     </div>
   </div>

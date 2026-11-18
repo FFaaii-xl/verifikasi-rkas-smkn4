@@ -1,15 +1,21 @@
 // State
 const STORAGE_KEY = 'RKAS_VERIFIKASI_DATA_2026';
+const SUPABASE_URL_KEY = 'RKAS_SUPABASE_URL';
+const SUPABASE_KEY_KEY = 'RKAS_SUPABASE_KEY';
+
 let rkasData = [];
 let filteredData = [];
 let selectedIndices = new Set();
 let activeRowIndex = -1;
+let supabaseClient = null;
+let cloudSyncTimer = null;
 
 // Init
 window.addEventListener('DOMContentLoaded', () => {
   loadData();
   setupEventListeners();
   renderAll();
+  initSupabase();
 });
 
 // Load Data from LocalStorage or Default
@@ -36,8 +42,13 @@ function loadData() {
   rkasData = JSON.parse(JSON.stringify(INITIAL_RKAS_DATA));
 }
 
-// Auto Save
+// Auto Save (Local & Cloud Sync)
 function saveData() {
+  saveDataLocalOnly();
+  triggerCloudSync();
+}
+
+function saveDataLocalOnly() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rkasData));
   } catch (e) {
@@ -45,6 +56,14 @@ function saveData() {
   }
   updateStats();
   updateParentRowsDOM();
+}
+
+function triggerCloudSync() {
+  if (!supabaseClient) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => {
+    pushAllToCloud(true);
+  }, 1200);
 }
 
 // Format Rupiah
@@ -103,12 +122,235 @@ function setupEventListeners() {
     updateSelectionUI();
     renderTable();
   });
+
+  // Supabase Cloud Modal & Actions
+  const btnCloudModal = document.getElementById('btnSupabaseModal');
+  if (btnCloudModal) btnCloudModal.addEventListener('click', () => toggleSupabaseModal(true));
+
+  const btnConnect = document.getElementById('btnConnectSupabase');
+  if (btnConnect) btnConnect.addEventListener('click', handleConnectSupabase);
+
+  const btnPush = document.getElementById('btnPushToCloud');
+  if (btnPush) btnPush.addEventListener('click', () => pushAllToCloud(false));
+
+  const btnPull = document.getElementById('btnPullFromCloud');
+  if (btnPull) btnPull.addEventListener('click', () => pullFromCloud(false));
 }
 
 function toggleKeyboardModal(show) {
   const modal = document.getElementById('modalKeyboard');
   if (show) modal.classList.add('open');
   else modal.classList.remove('open');
+}
+
+// ==========================================================================
+// SUPABASE CLOUD INTEGRATION
+// ==========================================================================
+function initSupabase() {
+  const url = localStorage.getItem(SUPABASE_URL_KEY) || 'https://vctllgknukpegpzklwiw.supabase.co';
+  const key = localStorage.getItem(SUPABASE_KEY_KEY) || '';
+
+  const inputUrl = document.getElementById('inputSupabaseUrl');
+  const inputKey = document.getElementById('inputSupabaseAnonKey');
+  if (inputUrl) inputUrl.value = url;
+  if (inputKey) inputKey.value = key;
+
+  if (window.supabase && url && key) {
+    try {
+      supabaseClient = window.supabase.createClient(url, key);
+      updateCloudStatusUI(true, 'Terhubung');
+      // Silently sync from cloud on startup
+      pullFromCloud(true);
+    } catch (e) {
+      console.warn('Supabase init error:', e);
+      updateCloudStatusUI(false, 'Gagal terhubung');
+    }
+  } else {
+    updateCloudStatusUI(false, 'Anon Key belum diisi');
+  }
+}
+
+function handleConnectSupabase() {
+  const url = document.getElementById('inputSupabaseUrl').value.trim();
+  const key = document.getElementById('inputSupabaseAnonKey').value.trim();
+
+  if (!url || !key) {
+    alert('Silakan masukkan Supabase Project URL dan Public Anon Key terlebih dahulu!');
+    return;
+  }
+
+  localStorage.setItem(SUPABASE_URL_KEY, url);
+  localStorage.setItem(SUPABASE_KEY_KEY, key);
+
+  try {
+    supabaseClient = window.supabase.createClient(url, key);
+    updateCloudStatusUI(true, 'Menghubungkan...');
+    pullFromCloud(false);
+  } catch (err) {
+    alert('Gagal inisialisasi Supabase: ' + err.message);
+    updateCloudStatusUI(false, 'Error: ' + err.message);
+  }
+}
+
+function updateCloudStatusUI(isConnected, desc, lastSync = null) {
+  const btnCloud = document.getElementById('btnSupabaseModal');
+  const statusText = document.getElementById('cloudStatusText');
+  const dot = document.getElementById('cloudStatusDot');
+  const descEl = document.getElementById('cloudStatusDesc');
+  const lastSyncEl = document.getElementById('cloudLastSync');
+
+  if (isConnected) {
+    if (btnCloud) btnCloud.classList.add('connected');
+    if (statusText) statusText.textContent = 'Cloud Aktif';
+    if (dot) dot.style.background = '#10b981';
+    if (descEl) {
+      descEl.textContent = desc || 'Terhubung ke Supabase';
+      descEl.style.color = '#065f46';
+    }
+  } else {
+    if (btnCloud) btnCloud.classList.remove('connected');
+    if (statusText) statusText.textContent = 'Cloud Supabase';
+    if (dot) dot.style.background = '#94a3b8';
+    if (descEl) {
+      descEl.textContent = desc || 'Belum Terhubung ke Cloud';
+      descEl.style.color = '#334155';
+    }
+  }
+
+  if (lastSync && lastSyncEl) {
+    lastSyncEl.textContent = `Sinkron: ${lastSync}`;
+  }
+}
+
+function toggleSupabaseModal(show) {
+  const modal = document.getElementById('modalSupabase');
+  if (show) modal.classList.add('open');
+  else modal.classList.remove('open');
+}
+
+async function pushAllToCloud(silent = false) {
+  if (!supabaseClient) {
+    if (!silent) alert('Silakan masukkan Supabase Anon Key dan klik "Hubungkan & Sinkronkan" terlebih dahulu!');
+    return;
+  }
+
+  try {
+    updateCloudStatusUI(true, 'Sedang mengunggah...');
+    const payload = rkasData.map(item => ({
+      no: item.no,
+      level: item.level || 4,
+      kode_program: item.kode_program || '',
+      kode_rekening: item.kode_rekening || '',
+      uraian: item.uraian || '',
+      volume: item.volume !== null && item.volume !== undefined ? String(item.volume) : null,
+      satuan: item.satuan || '',
+      tarif_harga: item.tarif_harga !== null && item.tarif_harga !== undefined ? Number(item.tarif_harga) : null,
+      jumlah: item.jumlah !== null && item.jumlah !== undefined ? Number(item.jumlah) : 0,
+      tahap_1: item.tahap_1 !== null && item.tahap_1 !== undefined ? Number(item.tahap_1) : 0,
+      tahap_2: item.tahap_2 !== null && item.tahap_2 !== undefined ? Number(item.tahap_2) : 0,
+      status: item.status || '',
+      keterangan: item.keterangan || '',
+      updated_at: new Date().toISOString()
+    }));
+
+    // Batch in 100 rows to avoid request limits
+    for (let i = 0; i < payload.length; i += 100) {
+      const chunk = payload.slice(i, i + 100);
+      const { error } = await supabaseClient
+        .from('rkas_verifikasi')
+        .upsert(chunk, { onConflict: 'no' });
+      if (error) throw error;
+    }
+
+    const now = new Date().toLocaleTimeString('id-ID');
+    updateCloudStatusUI(true, 'Tersinkron dengan Cloud', now);
+    if (!silent) alert(`Berhasil mengunggah ${payload.length} data verifikasi ke Supabase Cloud!`);
+  } catch (err) {
+    console.error('Push to cloud error:', err);
+    updateCloudStatusUI(false, 'Gagal unggah: ' + err.message);
+    if (!silent) {
+      alert('Gagal mengunggah ke Supabase: ' + err.message + '\n\nPastikan tabel "rkas_verifikasi" sudah dibuat di Supabase melalui menu SQL Editor.');
+    }
+  }
+}
+
+async function pullFromCloud(silent = false) {
+  if (!supabaseClient) {
+    if (!silent) alert('Silakan hubungkan Supabase terlebih dahulu!');
+    return;
+  }
+
+  try {
+    updateCloudStatusUI(true, 'Sedang memeriksa data...');
+    const { data, error } = await supabaseClient
+      .from('rkas_verifikasi')
+      .select('no, status, keterangan')
+      .order('no', { ascending: true });
+
+    if (error) throw error;
+
+    if (Array.isArray(data) && data.length > 0) {
+      let updatedCount = 0;
+      data.forEach(row => {
+        const item = rkasData.find(x => x.no === row.no);
+        if (item) {
+          if (row.status !== undefined && row.status !== null) item.status = row.status;
+          if (row.keterangan !== undefined && row.keterangan !== null) item.keterangan = row.keterangan;
+          updatedCount++;
+        }
+      });
+      saveDataLocalOnly();
+      applyFilters();
+      const now = new Date().toLocaleTimeString('id-ID');
+      updateCloudStatusUI(true, 'Tersinkron dengan Cloud', now);
+      if (!silent) alert(`Berhasil menyinkronkan ${updatedCount} data dari Supabase Cloud!`);
+    } else {
+      updateCloudStatusUI(true, 'Terhubung (Tabel masih kosong)');
+      if (!silent) {
+        if (confirm('Tabel "rkas_verifikasi" di Supabase masih kosong. Apakah Anda ingin mengunggah data verifikasi saat ini ke Supabase?')) {
+          pushAllToCloud(false);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Pull from cloud error:', err);
+    updateCloudStatusUI(false, 'Gagal mengambil data: ' + err.message);
+    if (!silent) {
+      alert('Gagal mengambil data dari Supabase: ' + err.message + '\n\nPastikan tabel "rkas_verifikasi" sudah dibuat.');
+    }
+  }
+}
+
+function copySqlSchema() {
+  const sql = `-- Migration: Create rkas_verifikasi table for SMKN 4 Surakarta
+CREATE TABLE IF NOT EXISTS public.rkas_verifikasi (
+  no integer PRIMARY KEY,
+  level integer NOT NULL DEFAULT 4,
+  kode_program text,
+  kode_rekening text,
+  uraian text,
+  volume text,
+  satuan text,
+  tarif_harga numeric,
+  jumlah numeric,
+  tahap_1 numeric,
+  tahap_2 numeric,
+  status text DEFAULT '',
+  keterangan text DEFAULT '',
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.rkas_verifikasi ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public all" ON public.rkas_verifikasi;
+CREATE POLICY "Allow public all" ON public.rkas_verifikasi
+  FOR ALL USING (true) WITH CHECK (true);
+`;
+  navigator.clipboard.writeText(sql).then(() => {
+    alert('SQL Schema berhasil disalin ke clipboard! Silakan buka SQL Editor di Supabase dan Paste.');
+  }).catch(() => {
+    prompt('Salin teks SQL di bawah ini:', sql);
+  });
 }
 
 // Filter Logic
