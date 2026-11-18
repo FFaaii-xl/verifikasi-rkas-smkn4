@@ -3,12 +3,17 @@ const STORAGE_KEY = 'RKAS_VERIFIKASI_DATA_2026';
 const SUPABASE_URL_KEY = 'RKAS_SUPABASE_URL';
 const SUPABASE_KEY_KEY = 'RKAS_SUPABASE_KEY';
 
+// Default Supabase Credentials (100% Automatic Connection)
+const DEFAULT_SUPABASE_URL = 'https://vctllgknukpegpzklwiw.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_euuqhnGSZ2uUpMfTOIWpXw_fAtbsGqy';
+
 let rkasData = [];
 let filteredData = [];
 let selectedIndices = new Set();
 let activeRowIndex = -1;
 let supabaseClient = null;
 let cloudSyncTimer = null;
+let realtimeChannel = null;
 
 // Init
 window.addEventListener('DOMContentLoaded', () => {
@@ -144,11 +149,11 @@ function toggleKeyboardModal(show) {
 }
 
 // ==========================================================================
-// SUPABASE CLOUD INTEGRATION
+// SUPABASE CLOUD INTEGRATION (100% Automatic & Realtime)
 // ==========================================================================
 function initSupabase() {
-  const url = localStorage.getItem(SUPABASE_URL_KEY) || 'https://vctllgknukpegpzklwiw.supabase.co';
-  const key = localStorage.getItem(SUPABASE_KEY_KEY) || '';
+  const url = localStorage.getItem(SUPABASE_URL_KEY) || DEFAULT_SUPABASE_URL;
+  const key = localStorage.getItem(SUPABASE_KEY_KEY) || DEFAULT_SUPABASE_KEY;
 
   const inputUrl = document.getElementById('inputSupabaseUrl');
   const inputKey = document.getElementById('inputSupabaseAnonKey');
@@ -158,15 +163,46 @@ function initSupabase() {
   if (window.supabase && url && key) {
     try {
       supabaseClient = window.supabase.createClient(url, key);
-      updateCloudStatusUI(true, 'Terhubung');
-      // Silently sync from cloud on startup
+      updateCloudStatusUI(true, 'Terhubung Otomatis');
+      
+      // 1. Silently pull latest cloud data on startup
       pullFromCloud(true);
+
+      // 2. Setup Realtime Subscription for live sync across all devices
+      setupRealtimeSync();
     } catch (e) {
       console.warn('Supabase init error:', e);
-      updateCloudStatusUI(false, 'Gagal terhubung');
+      updateCloudStatusUI(false, 'Gagal terhubung: ' + e.message);
     }
   } else {
-    updateCloudStatusUI(false, 'Anon Key belum diisi');
+    updateCloudStatusUI(false, 'Menunggu Supabase Client...');
+  }
+}
+
+function setupRealtimeSync() {
+  if (!supabaseClient) return;
+  try {
+    if (realtimeChannel) {
+      supabaseClient.removeChannel(realtimeChannel);
+    }
+    realtimeChannel = supabaseClient
+      .channel('public:rkas_verifikasi')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rkas_verifikasi' }, payload => {
+        if (payload.new && payload.new.no) {
+          const item = rkasData.find(x => x.no === payload.new.no);
+          if (item) {
+            item.status = payload.new.status || '';
+            item.keterangan = payload.new.keterangan || '';
+            saveDataLocalOnly();
+            applyFilters();
+            const now = new Date().toLocaleTimeString('id-ID');
+            updateCloudStatusUI(true, 'Sinkron Realtime', now);
+          }
+        }
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn('Realtime subscription error:', err);
   }
 }
 
