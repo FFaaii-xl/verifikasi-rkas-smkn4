@@ -762,17 +762,17 @@ function renderTable() {
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
         <td class="col-desc">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="background: var(--accent); color: white; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">STANDAR</span>
-            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: #fde047;">${escapeHtml(item.uraian)}</span>
+            <span style="background: #2563eb; color: #ffffff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;">STANDAR</span>
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #ffffff;">${escapeHtml(item.uraian)}</span>
           </div>
         </td>
-        <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #f8fafc;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 700; font-size: 12px; color: #ffffff;">
           ${formatRp(item.jumlah)}
         </td>
         <td class="col-btn">
           ${renderParentSwitchButtonHtml(item)}
         </td>
-        <td class="col-note" style="font-size: 10px; color: #cbd5e1; font-style: italic;">
+        <td class="col-note" style="font-size: 10px; color: #94a3b8; font-style: italic;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -790,17 +790,17 @@ function renderTable() {
         <td class="col-no" style="font-family: monospace; opacity: 0.7;">${item.no}</td>
         <td class="col-desc">
           <div style="display: flex; align-items: center; gap: 6px; padding-left: 10px;">
-            <span style="background: #a7f3d0; color: #065f46; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;">PROGRAM</span>
-            <span style="font-size: 12px; color: #064e3b;">${escapeHtml(item.uraian)}</span>
+            <span style="background: #dcfce7; color: #064e3b; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #a7f3d0;">PROGRAM</span>
+            <span style="font-size: 12px; font-weight: 600; color: #064e3b;">${escapeHtml(item.uraian)}</span>
           </div>
         </td>
-        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #065f46;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #064e3b;">
           ${formatRp(item.jumlah)}
         </td>
         <td class="col-btn">
           ${renderParentSwitchButtonHtml(item)}
         </td>
-        <td class="col-note" style="font-size: 10px; color: #059669;">
+        <td class="col-note" style="font-size: 10px; color: #047857;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
@@ -809,7 +809,7 @@ function renderTable() {
     }
 
     if (lvl === 3) {
-      // LEVEL 3: KEGIATAN (Soft Butter)
+      // LEVEL 3: KEGIATAN (Clean Slate)
       const res = computeParentStatus(item);
       item.status = res.status;
       tr.className = `row-l3 ${res.isAllDone ? 'parent-all-done' : ''}`;
@@ -819,8 +819,8 @@ function renderTable() {
         <td class="col-desc">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-left: 20px;">
             <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
-              <span style="background: #fde68a; color: #92400e; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; flex-shrink: 0;">KEGIATAN</span>
-              <span style="font-size: 11px; color: #78350f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.uraian)}</span>
+              <span style="background: #e2e8f0; color: #1e293b; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; flex-shrink: 0;">KEGIATAN</span>
+              <span style="font-size: 11px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.uraian)}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
               <button onclick="promptSubkegiatanNote('${item.kode_program}', '${escapeHtml(item.uraian)}')" 
@@ -829,20 +829,20 @@ function renderTable() {
                 📝 Catatan
               </button>
               <button onclick="markSubkegiatanStatus('${item.kode_program}', 'Terlaksana')" 
-                style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer;"
+                style="background: #e0e7ff; border: 1px solid #c7d2fe; color: #3730a3; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer;"
                 title="Tandai semua item rincian di bawah sub-kegiatan ini menjadi Terlaksana">
                 ⚡ Semua Terlaksana
               </button>
             </div>
           </div>
         </td>
-        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #92400e;">
+        <td class="col-amt" style="font-family: monospace; font-weight: 600; font-size: 11px; color: #0f172a;">
           ${formatRp(item.jumlah)}
         </td>
         <td class="col-btn">
           ${renderParentSwitchButtonHtml(item)}
         </td>
-        <td class="col-note" style="font-size: 10px; color: #d97706;">
+        <td class="col-note" style="font-size: 10px; color: #64748b;">
           T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
         </td>
       `;
