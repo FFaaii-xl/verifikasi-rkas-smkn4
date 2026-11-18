@@ -5,8 +5,6 @@ let filteredData = [];
 let selectedIndices = new Set();
 let activeRowIndex = -1;
 
-const STATUS_CYCLE = ['Belum Terlaksana', 'Terlaksana', 'Tidak Terlaksana'];
-
 // Init
 window.addEventListener('DOMContentLoaded', () => {
   loadData();
@@ -19,17 +17,24 @@ function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
-      rkasData = JSON.parse(saved);
-      if (!Array.isArray(rkasData) || rkasData.length === 0) {
-        rkasData = JSON.parse(JSON.stringify(INITIAL_RKAS_DATA));
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Merge with initial data to preserve levels
+        rkasData = INITIAL_RKAS_DATA.map(initItem => {
+          const found = parsed.find(p => p.no === initItem.no);
+          return {
+            ...initItem,
+            status: found ? found.status : '',
+            keterangan: found ? (found.keterangan || '') : ''
+          };
+        });
+        return;
       }
     } catch (e) {
-      console.error('Failed to parse localStorage, resetting to default', e);
-      rkasData = JSON.parse(JSON.stringify(INITIAL_RKAS_DATA));
+      console.error('Failed to parse localStorage', e);
     }
-  } else {
-    rkasData = JSON.parse(JSON.stringify(INITIAL_RKAS_DATA));
   }
+  rkasData = JSON.parse(JSON.stringify(INITIAL_RKAS_DATA));
 }
 
 // Auto Save
@@ -76,7 +81,7 @@ function setupEventListeners() {
   // Select All Checkbox
   document.getElementById('headerCheckbox').addEventListener('change', (e) => {
     if (e.target.checked) {
-      filteredData.forEach(item => selectedIndices.add(item.no));
+      filteredData.filter(x => x.level === 4).forEach(item => selectedIndices.add(item.no));
     } else {
       selectedIndices.clear();
     }
@@ -85,13 +90,7 @@ function setupEventListeners() {
   });
 
   document.getElementById('btnSelectAllVisible').addEventListener('click', () => {
-    filteredData.forEach(item => selectedIndices.add(item.no));
-    updateSelectionUI();
-    renderTable();
-  });
-
-  document.getElementById('btnDeselectAll').addEventListener('click', () => {
-    selectedIndices.clear();
+    filteredData.filter(x => x.level === 4).forEach(item => selectedIndices.add(item.no));
     updateSelectionUI();
     renderTable();
   });
@@ -111,19 +110,23 @@ function applyFilters() {
   const sts = document.getElementById('filterStatus').value;
 
   filteredData = rkasData.filter(item => {
+    // Search query
     if (q) {
       const matchText = (item.uraian || '') + ' ' + (item.kode_rekening || '') + ' ' + (item.kode_program || '') + ' ' + (item.no || '');
       if (!matchText.toLowerCase().includes(q)) return false;
     }
 
+    // Standar filter
     if (std !== 'ALL') {
       const prog = item.kode_program || '';
       if (!prog.startsWith(std)) return false;
     }
 
+    // Tahap filter
     if (thp === 'T1' && (!item.tahap_1 || item.tahap_1 <= 0)) return false;
     if (thp === 'T2' && (!item.tahap_2 || item.tahap_2 <= 0)) return false;
 
+    // Status filter (only applies strictly to level 4 items, but keep parent headers if any child matches)
     if (sts === 'UNCHECKED' && item.status) return false;
     if (sts !== 'ALL' && sts !== 'UNCHECKED' && item.status !== sts) return false;
 
@@ -169,12 +172,31 @@ function setItemStatus(no, status, autoNext = false) {
 
   renderTable();
 
-  if (autoNext && fIdx !== -1 && fIdx < filteredData.length - 1) {
-    setActiveRow(fIdx + 1);
+  if (autoNext && fIdx !== -1) {
+    // Jump to next level 4 item
+    for (let i = fIdx + 1; i < filteredData.length; i++) {
+      if (filteredData[i].level === 4) {
+        setActiveRow(i);
+        break;
+      }
+    }
   }
 }
 
-// Render Table
+// Helper: Mark all level 4 items under a sub-kegiatan as Terlaksana
+function markSubkegiatanStatus(kodeProgramPrefix, status) {
+  let count = 0;
+  rkasData.forEach(item => {
+    if (item.level === 4 && item.kode_program.startsWith(kodeProgramPrefix)) {
+      item.status = status;
+      count++;
+    }
+  });
+  saveData();
+  applyFilters();
+}
+
+// Render Table matching 6 Fixed Columns
 function renderTable() {
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
@@ -182,9 +204,9 @@ function renderTable() {
   if (filteredData.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="12" class="p-8 text-center text-slate-400">
+        <td colspan="6" class="p-8 text-center text-slate-400">
           <i class="ph-bold ph-files text-3xl mb-1 block"></i>
-          Tidak ada data kegiatan yang cocok dengan filter.
+          Tidak ada data kegiatan yang cocok dengan filter pencarian.
         </td>
       </tr>
     `;
@@ -202,162 +224,233 @@ function renderTable() {
     const isSelected = selectedIndices.has(item.no);
     const isActive = activeRowIndex === fIdx;
 
-    let rowBg = 'hover:bg-slate-50 transition-colors';
-    if (item.is_header) {
-      rowBg = 'bg-slate-100 font-semibold text-slate-800';
-    } else if (item.status === 'Terlaksana') {
-      rowBg = 'bg-emerald-50/50 hover:bg-emerald-50';
+    // --- LEVEL STYLING ---
+    const lvl = item.level || (item.is_header ? 1 : 4);
+
+    if (lvl === 1) {
+      // LEVEL 1: STANDAR (Bold Navy Bar)
+      tr.className = `bg-indigo-950 text-white font-bold border-t-2 border-indigo-700`;
+      tr.innerHTML = `
+        <td class="p-2 text-center" style="width: 4%;">
+          <span class="text-indigo-400 text-xs font-mono">•</span>
+        </td>
+        <td class="p-2 text-center text-indigo-300 font-mono text-xs" style="width: 5%;">${item.no}</td>
+        <td class="p-2" style="width: 45%;">
+          <div class="flex items-center gap-2">
+            <span class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-wider shrink-0">STANDAR</span>
+            <span class="text-xs uppercase tracking-wide text-yellow-300">${escapeHtml(item.uraian)}</span>
+          </div>
+        </td>
+        <td class="p-2 text-right font-mono text-indigo-200 text-xs font-bold" style="width: 17%;">
+          ${formatRp(item.jumlah)}
+        </td>
+        <td class="p-2 text-center text-indigo-300 text-[11px]" style="width: 14%;">
+          <span class="bg-indigo-900/80 px-2 py-0.5 rounded text-[10px]">Alokasi Standar</span>
+        </td>
+        <td class="p-2 text-indigo-400 text-[10px] italic" style="width: 15%;">
+          T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
+        </td>
+      `;
+      fragment.appendChild(tr);
+      return;
+    }
+
+    if (lvl === 2) {
+      // LEVEL 2: PROGRAM (Soft Emerald Bar)
+      tr.className = `bg-emerald-50/90 text-emerald-950 font-bold border-l-4 border-emerald-600 border-t border-emerald-200`;
+      tr.innerHTML = `
+        <td class="p-2 text-center" style="width: 4%;"></td>
+        <td class="p-2 text-center text-emerald-700 font-mono text-xs" style="width: 5%;">${item.no}</td>
+        <td class="p-2" style="width: 45%;">
+          <div class="flex items-center gap-2 pl-3">
+            <span class="bg-emerald-200 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">PROGRAM</span>
+            <span class="text-xs text-emerald-900">${escapeHtml(item.uraian)}</span>
+          </div>
+        </td>
+        <td class="p-2 text-right font-mono text-emerald-800 text-xs font-semibold" style="width: 17%;">
+          ${formatRp(item.jumlah)}
+        </td>
+        <td class="p-2 text-center text-emerald-700 text-[11px]" style="width: 14%;">
+          <span class="bg-emerald-100/80 px-2 py-0.5 rounded text-[10px]">Alokasi Program</span>
+        </td>
+        <td class="p-2 text-emerald-600 text-[10px]" style="width: 15%;">
+          T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
+        </td>
+      `;
+      fragment.appendChild(tr);
+      return;
+    }
+
+    if (lvl === 3) {
+      // LEVEL 3: KEGIATAN / SUB-KEGIATAN (Soft Amber Bar)
+      tr.className = `bg-amber-50/80 text-amber-950 font-semibold border-l-4 border-amber-400 border-t border-amber-200`;
+      tr.innerHTML = `
+        <td class="p-2 text-center" style="width: 4%;"></td>
+        <td class="p-2 text-center text-amber-700 font-mono text-xs" style="width: 5%;">${item.no}</td>
+        <td class="p-2" style="width: 45%;">
+          <div class="flex items-center justify-between gap-2 pl-6">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="bg-amber-200 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0">KEGIATAN</span>
+              <span class="text-xs text-amber-950 truncate">${escapeHtml(item.uraian)}</span>
+            </div>
+            <button onclick="markSubkegiatanStatus('${item.kode_program}', 'Terlaksana')" 
+              class="shrink-0 text-[10px] bg-amber-200/80 hover:bg-emerald-200 text-amber-900 hover:text-emerald-900 px-1.5 py-0.5 rounded transition font-medium"
+              title="Tandai semua item rincian di bawah sub-kegiatan ini menjadi Terlaksana">
+              ⚡ Semua Terlaksana
+            </button>
+          </div>
+        </td>
+        <td class="p-2 text-right font-mono text-amber-900 text-xs font-semibold" style="width: 17%;">
+          ${formatRp(item.jumlah)}
+        </td>
+        <td class="p-2 text-center text-amber-800 text-[11px]" style="width: 14%;">
+          <span class="bg-amber-100 px-2 py-0.5 rounded text-[10px]">Sub-Total Kegiatan</span>
+        </td>
+        <td class="p-2 text-amber-700 text-[10px]" style="width: 15%;">
+          T1: ${formatRp(item.tahap_1)} | T2: ${formatRp(item.tahap_2)}
+        </td>
+      `;
+      fragment.appendChild(tr);
+      return;
+    }
+
+    // LEVEL 4: ITEM BELANJA / RINCIAN KEGIATAN (The Verifiable Item)
+    let rowBg = 'hover:bg-slate-50 transition-colors bg-white';
+    if (item.status === 'Terlaksana') {
+      rowBg = 'bg-emerald-50/40 hover:bg-emerald-50';
     } else if (item.status === 'Tidak Terlaksana') {
-      rowBg = 'bg-rose-50/50 hover:bg-rose-50';
+      rowBg = 'bg-rose-50/40 hover:bg-rose-50';
     } else if (item.status === 'Belum Terlaksana') {
-      rowBg = 'bg-amber-50/50 hover:bg-amber-50';
-    } else if (item.status === 'Terlaksana Sebagian') {
-      rowBg = 'bg-blue-50/50 hover:bg-blue-50';
+      rowBg = 'bg-amber-50/40 hover:bg-amber-50';
     }
 
     if (isActive) rowBg += ' active-row';
-    tr.className = `${rowBg} cursor-pointer`;
+    tr.className = `${rowBg} cursor-pointer border-b border-slate-100`;
 
     tr.addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       setActiveRow(fIdx);
     });
 
-    // Checkbox
+    // Col 1: Checkbox (4%)
     const tdCheck = document.createElement('td');
     tdCheck.className = 'p-2 text-center';
+    tdCheck.style.width = '4%';
     tdCheck.innerHTML = `<input type="checkbox" ${isSelected ? 'checked' : ''} class="rounded text-indigo-600 cursor-pointer" onclick="event.stopPropagation(); toggleSelect(${item.no})">`;
     tr.appendChild(tdCheck);
 
-    // No
+    // Col 2: No (5%)
     const tdNo = document.createElement('td');
-    tdNo.className = 'p-2 text-center font-mono text-slate-500 font-medium';
+    tdNo.className = 'p-2 text-center font-mono text-slate-400 text-xs';
+    tdNo.style.width = '5%';
     tdNo.textContent = item.no;
     tr.appendChild(tdNo);
 
-    // Kode Rekening
-    const tdRek = document.createElement('td');
-    tdRek.className = 'p-2 font-mono text-[11px] text-slate-600';
-    tdRek.textContent = item.kode_rekening || '-';
-    tr.appendChild(tdRek);
-
-    // Kode Program
-    const tdProg = document.createElement('td');
-    tdProg.className = 'p-2 font-mono text-[11px] text-slate-600 font-medium';
-    tdProg.textContent = item.kode_program || '-';
-    tr.appendChild(tdProg);
-
-    // Uraian
+    // Col 3: Hirarki & Uraian Kegiatan (45%)
     const tdUraian = document.createElement('td');
-    tdUraian.className = 'p-2 text-slate-800 leading-snug';
-    tdUraian.innerHTML = item.is_header 
-      ? `<span class="text-indigo-900 font-bold">${escapeHtml(item.uraian)}</span>`
-      : escapeHtml(item.uraian);
+    tdUraian.className = 'p-2';
+    tdUraian.style.width = '45%';
+
+    const volTarifStr = item.volume ? `${formatNum(item.volume)} ${item.satuan} @ Rp ${formatNum(item.tarif_harga)}` : '';
+    const rekStr = item.kode_rekening ? `Rek: ${item.kode_rekening}` : '';
+
+    tdUraian.innerHTML = `
+      <div class="pl-8 flex items-start gap-1.5">
+        <span class="text-slate-400 font-mono text-xs select-none shrink-0 mt-0.5">↳</span>
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-medium text-slate-800 leading-snug break-words">${escapeHtml(item.uraian)}</div>
+          <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-mono flex-wrap">
+            ${rekStr ? `<span class="bg-slate-100 px-1 py-0.2 rounded border border-slate-200">${rekStr}</span>` : ''}
+            ${volTarifStr ? `<span>${volTarifStr}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
     tr.appendChild(tdUraian);
 
-    // Volume / Satuan
-    const tdVolSat = document.createElement('td');
-    tdVolSat.className = 'p-2 text-center text-slate-600 whitespace-nowrap';
-    tdVolSat.textContent = item.volume ? `${item.volume} ${item.satuan}` : '-';
-    tr.appendChild(tdVolSat);
+    // Col 4: Anggaran Total & Tahap (17%)
+    const tdAnggaran = document.createElement('td');
+    tdAnggaran.className = 'p-2 text-right font-mono';
+    tdAnggaran.style.width = '17%';
+    tdAnggaran.innerHTML = `
+      <div class="text-xs font-bold text-slate-800">${formatRp(item.jumlah)}</div>
+      <div class="flex items-center justify-end gap-1 mt-0.5 text-[10px]">
+        ${item.tahap_1 > 0 ? `<span class="bg-indigo-50 text-indigo-700 px-1 rounded border border-indigo-200">T1: ${formatRp(item.tahap_1)}</span>` : ''}
+        ${item.tahap_2 > 0 ? `<span class="bg-purple-50 text-purple-700 px-1 rounded border border-purple-200">T2: ${formatRp(item.tahap_2)}</span>` : ''}
+      </div>
+    `;
+    tr.appendChild(tdAnggaran);
 
-    // Tarif
-    const tdTarif = document.createElement('td');
-    tdTarif.className = 'p-2 text-right font-mono text-slate-600';
-    tdTarif.textContent = item.tarif_harga ? formatNum(item.tarif_harga) : '-';
-    tr.appendChild(tdTarif);
-
-    // Jumlah
-    const tdJumlah = document.createElement('td');
-    tdJumlah.className = 'p-2 text-right font-mono font-semibold text-slate-800';
-    tdJumlah.textContent = formatNum(item.jumlah);
-    tr.appendChild(tdJumlah);
-
-    // Tahap 1
-    const tdT1 = document.createElement('td');
-    tdT1.className = `p-2 text-right font-mono ${item.tahap_1 > 0 ? 'text-indigo-700 font-medium' : 'text-slate-400'}`;
-    tdT1.textContent = formatNum(item.tahap_1);
-    tr.appendChild(tdT1);
-
-    // Tahap 2
-    const tdT2 = document.createElement('td');
-    tdT2.className = `p-2 text-right font-mono ${item.tahap_2 > 0 ? 'text-indigo-700 font-medium' : 'text-slate-400'}`;
-    tdT2.textContent = formatNum(item.tahap_2);
-    tr.appendChild(tdT2);
-
-    // SINGLE SWITCH BUTTON (Belum -> Terlaksana -> Tidak Terlaksana)
+    // Col 5: SINGLE SWITCH BUTTON (14%)
     const tdStatus = document.createElement('td');
     tdStatus.className = 'p-2 text-center whitespace-nowrap';
+    tdStatus.style.width = '14%';
 
     let switchBtnHtml = '';
     if (item.status === 'Terlaksana') {
       switchBtnHtml = `
         <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-44 py-1.5 px-3 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center justify-between gap-1 transition active:scale-95 mx-auto"
-          title="Klik untuk beralih: Terlaksana ➔ Tidak Terlaksana ➔ Belum">
-          <span class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
+          title="Klik untuk beralih status">
+          <span class="flex items-center gap-1 truncate">
+            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
             Terlaksana
           </span>
-          <span class="text-[10px] bg-emerald-700/80 px-1.5 py-0.5 rounded font-mono text-emerald-100 flex items-center gap-0.5">
-            Ganti ⇄
+          <span class="text-[9px] bg-emerald-700/80 px-1 py-0.2 rounded font-mono text-emerald-100 shrink-0">
+            Switch ⇄
           </span>
         </button>
       `;
     } else if (item.status === 'Tidak Terlaksana') {
       switchBtnHtml = `
         <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-44 py-1.5 px-3 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center justify-between gap-1 transition active:scale-95 mx-auto"
-          title="Klik untuk beralih: Tidak Terlaksana ➔ Belum ➔ Terlaksana">
-          <span class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-white"></span>
-            Tidak Terlaksana
+          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
+          title="Klik untuk beralih status">
+          <span class="flex items-center gap-1 truncate">
+            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
+            Tidak
           </span>
-          <span class="text-[10px] bg-rose-700/80 px-1.5 py-0.5 rounded font-mono text-rose-100 flex items-center gap-0.5">
-            Ganti ⇄
+          <span class="text-[9px] bg-rose-700/80 px-1 py-0.2 rounded font-mono text-rose-100 shrink-0">
+            Switch ⇄
           </span>
         </button>
       `;
     } else if (item.status === 'Belum Terlaksana') {
       switchBtnHtml = `
         <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-44 py-1.5 px-3 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm flex items-center justify-between gap-1 transition active:scale-95 mx-auto"
-          title="Klik untuk beralih: Belum ➔ Terlaksana ➔ Tidak Terlaksana">
-          <span class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-white"></span>
-            Belum Terlaksana
+          class="w-full py-1 px-2 rounded-md text-[11px] font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs flex items-center justify-between gap-1 transition active:scale-95"
+          title="Klik untuk beralih status">
+          <span class="flex items-center gap-1 truncate">
+            <span class="w-2 h-2 rounded-full bg-white shrink-0"></span>
+            Belum
           </span>
-          <span class="text-[10px] bg-amber-600/80 px-1.5 py-0.5 rounded font-mono text-amber-100 flex items-center gap-0.5">
-            Ganti ⇄
+          <span class="text-[9px] bg-amber-600/80 px-1 py-0.2 rounded font-mono text-amber-100 shrink-0">
+            Switch ⇄
           </span>
         </button>
       `;
     } else {
-      // Belum Diverifikasi (default/kosong)
       switchBtnHtml = `
         <button onclick="event.stopPropagation(); cycleStatus(${item.no})" 
-          class="w-44 py-1.5 px-3 rounded-lg text-xs font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 border border-slate-300 hover:border-indigo-300 shadow-2xs flex items-center justify-between gap-1 transition active:scale-95 mx-auto"
-          title="Klik untuk beralih ke Terlaksana">
-          <span class="flex items-center gap-1.5 text-slate-500">
-            <span class="w-2 h-2 rounded-full bg-slate-300"></span>
-            Pilih Status
-          </span>
-          <span class="text-[10px] bg-slate-200 hover:bg-indigo-100 px-1.5 py-0.5 rounded font-mono text-slate-600 flex items-center gap-0.5">
+          class="w-full py-1 px-2 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 border border-slate-300 shadow-2xs flex items-center justify-between gap-1 transition active:scale-95"
+          title="Klik untuk tandai Terlaksana">
+          <span class="text-slate-400 truncate">Pilih Status</span>
+          <span class="text-[9px] bg-slate-200 px-1 py-0.2 rounded font-mono text-slate-600 shrink-0">
             Switch ⇄
           </span>
         </button>
       `;
     }
-
     tdStatus.innerHTML = switchBtnHtml;
     tr.appendChild(tdStatus);
 
-    // Keterangan
+    // Col 6: Catatan / Keterangan (15%)
     const tdKet = document.createElement('td');
     tdKet.className = 'p-2';
+    tdKet.style.width = '15%';
     tdKet.innerHTML = `
-      <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan verifikasi..."
-        class="w-full text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-transparent hover:bg-white"
+      <input type="text" value="${escapeHtml(item.keterangan || '')}" placeholder="Catatan..."
+        class="w-full text-[11px] px-2 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-transparent hover:bg-white truncate"
         onchange="updateItemKeterangan(${item.no}, this.value)"
         onclick="event.stopPropagation()">
     `;
@@ -407,34 +500,54 @@ function handleKeyNavigation(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
   if (activeRowIndex === -1 && filteredData.length > 0) {
-    if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter' || e.key === '1' || e.key === '2' || e.key === '3') {
-      setActiveRow(0);
-      return;
+    for (let i = 0; i < filteredData.length; i++) {
+      if (filteredData[i].level === 4) {
+        setActiveRow(i);
+        return;
+      }
     }
   }
 
   if (activeRowIndex < 0 || activeRowIndex >= filteredData.length) return;
   const currentItem = filteredData[activeRowIndex];
 
-  // Space or Enter: Trigger single switch button and move to next item!
-  if (e.key === ' ' || e.key === 'Enter') {
+  if (currentItem.level === 4) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      cycleStatus(currentItem.no, true);
+      return;
+    } else if (e.key === '1') {
+      e.preventDefault();
+      setItemStatus(currentItem.no, 'Terlaksana', true);
+      return;
+    } else if (e.key === '2') {
+      e.preventDefault();
+      setItemStatus(currentItem.no, 'Tidak Terlaksana', true);
+      return;
+    } else if (e.key === '3') {
+      e.preventDefault();
+      setItemStatus(currentItem.no, 'Belum Terlaksana', true);
+      return;
+    }
+  }
+
+  // Navigation Arrow Down / Up
+  if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'j') {
     e.preventDefault();
-    cycleStatus(currentItem.no, true);
-  } else if (e.key === '1') {
-    e.preventDefault();
-    setItemStatus(currentItem.no, 'Terlaksana', true);
-  } else if (e.key === '2') {
-    e.preventDefault();
-    setItemStatus(currentItem.no, 'Tidak Terlaksana', true);
-  } else if (e.key === '3') {
-    e.preventDefault();
-    setItemStatus(currentItem.no, 'Belum Terlaksana', true);
-  } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'j') {
-    e.preventDefault();
-    setActiveRow(activeRowIndex + 1);
+    for (let i = activeRowIndex + 1; i < filteredData.length; i++) {
+      if (filteredData[i].level === 4) {
+        setActiveRow(i);
+        break;
+      }
+    }
   } else if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    setActiveRow(activeRowIndex - 1);
+    for (let i = activeRowIndex - 1; i >= 0; i--) {
+      if (filteredData[i].level === 4) {
+        setActiveRow(i);
+        break;
+      }
+    }
   }
 }
 
@@ -451,12 +564,10 @@ function toggleSelect(no) {
 function updateSelectionUI() {
   const count = selectedIndices.size;
   document.getElementById('selectedCount').textContent = count;
-  const btnDeselect = document.getElementById('btnDeselectAll');
-  if (count > 0) btnDeselect.classList.remove('hidden');
-  else btnDeselect.classList.add('hidden');
 
   const headerCb = document.getElementById('headerCheckbox');
-  if (filteredData.length > 0 && selectedIndices.size === filteredData.length) {
+  const level4Items = filteredData.filter(x => x.level === 4);
+  if (level4Items.length > 0 && selectedIndices.size === level4Items.length) {
     headerCb.checked = true;
     headerCb.indeterminate = false;
   } else if (selectedIndices.size > 0) {
@@ -487,9 +598,8 @@ function batchSetStatus(status) {
 
 // Stats & Dashboard Calculation
 function updateStats() {
-  const items = rkasData.filter(x => !x.is_header);
+  const items = rkasData.filter(x => x.level === 4);
   const totalItems = items.length;
-  const totalBudget = items.reduce((acc, x) => acc + (x.jumlah || 0), 0);
 
   let cDone = 0, sumDone = 0;
   let cCancel = 0, sumCancel = 0;
@@ -513,37 +623,24 @@ function updateStats() {
     }
   });
 
-  const pct = (c) => totalItems > 0 ? ((c / totalItems) * 100).toFixed(1) + '%' : '0%';
-
-  document.getElementById('statTotalItems').textContent = totalItems;
-  document.getElementById('statTotalBudget').textContent = formatRp(totalBudget);
-
   document.getElementById('statCountDone').textContent = cDone;
   document.getElementById('statSumDone').textContent = formatRp(sumDone);
-  document.getElementById('statPctDone').textContent = pct(cDone);
 
   document.getElementById('statCountCancel').textContent = cCancel;
-  document.getElementById('statSumCancel').textContent = formatRp(sumCancel);
-  document.getElementById('statPctCancel').textContent = pct(cCancel);
-
   document.getElementById('statCountPending').textContent = cPending;
-  document.getElementById('statSumPending').textContent = formatRp(sumPending);
-  document.getElementById('statPctPending').textContent = pct(cPending);
-
   document.getElementById('statCountUnchecked').textContent = cUnchecked;
-  document.getElementById('statSumUnchecked').textContent = formatRp(sumUnchecked);
-  document.getElementById('statPctUnchecked').textContent = pct(cUnchecked);
 
-  // Progress Bar
+  const checkedCount = cDone + cCancel + cPending;
   const pDone = totalItems > 0 ? (cDone / totalItems) * 100 : 0;
   const pPending = totalItems > 0 ? (cPending / totalItems) * 100 : 0;
   const pCancel = totalItems > 0 ? (cCancel / totalItems) * 100 : 0;
-  const pTotalChecked = pDone + pPending + pCancel;
+  const pTotal = totalItems > 0 ? ((checkedCount / totalItems) * 100).toFixed(1) : '0';
 
   document.getElementById('barDone').style.width = pDone + '%';
   document.getElementById('barPending').style.width = pPending + '%';
   document.getElementById('barCancel').style.width = pCancel + '%';
-  document.getElementById('overallProgressText').textContent = `${pTotalChecked.toFixed(1)}% Selesai Diverifikasi (${cDone + cCancel + cPending}/${totalItems})`;
+  document.getElementById('statProgressPct').textContent = `${pTotal}%`;
+  document.getElementById('statProgressDetail').textContent = `(${checkedCount}/${totalItems} item)`;
 }
 
 function renderAll() {
@@ -597,7 +694,7 @@ function exportToExcel() {
   }
 
   const headers = [
-    "No.", "Kode Rekening", "Kode Program", "Uraian Kegiatan",
+    "No.", "Level", "Kode Rekening", "Kode Program", "Uraian Kegiatan",
     "Volume", "Satuan", "Tarif Harga (Rp)", "Jumlah (Rp)",
     "Tahap 1 (Rp)", "Tahap 2 (Rp)", "Status Pelaksanaan", "Keterangan"
   ];
@@ -607,6 +704,7 @@ function exportToExcel() {
   rkasData.forEach(item => {
     rows.push([
       item.no,
+      item.level_name || '',
       item.kode_rekening || '',
       item.kode_program || '',
       item.uraian || '',
@@ -626,6 +724,7 @@ function exportToExcel() {
 
   wsData['!cols'] = [
     { wch: 6 },
+    { wch: 12 },
     { wch: 20 },
     { wch: 14 },
     { wch: 65 },
@@ -641,7 +740,7 @@ function exportToExcel() {
 
   XLSX.utils.book_append_sheet(wb, wsData, "Verifikasi Kegiatan");
 
-  const items = rkasData.filter(x => !x.is_header);
+  const items = rkasData.filter(x => x.level === 4);
   const calcSum = (status) => items.filter(x => x.status === status).reduce((acc, x) => acc + (x.jumlah || 0), 0);
   const calcCount = (status) => items.filter(x => x.status === status).length;
 
