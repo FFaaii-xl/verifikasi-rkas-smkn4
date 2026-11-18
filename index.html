@@ -58,7 +58,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <button id="btnKeyboardHelp" class="bg-indigo-800/80 hover:bg-indigo-700 text-xs px-3 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-1.5 transition">
           <i class="ph-bold ph-keyboard"></i>
-          <span>Mode Cepat (Keyboard)</span>
+          <span>Pintasan Keyboard</span>
         </button>
 
         <button id="btnBackup" class="bg-indigo-800/80 hover:bg-indigo-700 text-xs px-3 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-1.5 transition" title="Simpan Cadangan JSON">
@@ -83,11 +83,11 @@
   <!-- MAIN CONTAINER -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex-1 flex flex-col gap-4 w-full">
 
-    <!-- STATS DASHBOARD -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <!-- STATS DASHBOARD (5 cards) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <!-- Total Items -->
       <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col justify-between">
-        <span class="text-xs text-slate-500 font-medium">Total Item</span>
+        <span class="text-xs text-slate-500 font-medium">Total Item Kegiatan</span>
         <div class="flex items-baseline justify-between mt-1">
           <span id="statTotalItems" class="text-xl font-bold text-slate-800">0</span>
           <span class="text-xs text-slate-400">item</span>
@@ -114,7 +114,7 @@
       <div class="bg-rose-50/60 rounded-xl p-3 border border-rose-200 shadow-sm flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs text-rose-700 font-semibold flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span> Tidak Ada
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span> Tidak Terlaksana
           </span>
           <span id="statPctCancel" class="text-xs font-bold text-rose-700">0%</span>
         </div>
@@ -129,7 +129,7 @@
       <div class="bg-amber-50/60 rounded-xl p-3 border border-amber-200 shadow-sm flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs text-amber-700 font-semibold flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Belum
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Belum Terlaksana
           </span>
           <span id="statPctPending" class="text-xs font-bold text-amber-700">0%</span>
         </div>
@@ -138,21 +138,6 @@
           <span class="text-xs text-amber-600">kegiatan</span>
         </div>
         <div class="text-[11px] text-amber-700 mt-1 truncate font-medium" id="statSumPending">Rp 0</div>
-      </div>
-
-      <!-- Sebagian -->
-      <div class="bg-blue-50/60 rounded-xl p-3 border border-blue-200 shadow-sm flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-blue-700 font-semibold flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Sebagian
-          </span>
-          <span id="statPctPartial" class="text-xs font-bold text-blue-700">0%</span>
-        </div>
-        <div class="flex items-baseline justify-between mt-1">
-          <span id="statCountPartial" class="text-xl font-bold text-blue-800">0</span>
-          <span class="text-xs text-blue-600">kegiatan</span>
-        </div>
-        <div class="text-[11px] text-blue-700 mt-1 truncate font-medium" id="statSumPartial">Rp 0</div>
       </div>
 
       <!-- Belum Diverifikasi -->
@@ -181,7 +166,6 @@
       </div>
       <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden flex">
         <div id="barDone" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%" title="Terlaksana"></div>
-        <div id="barPartial" class="bg-blue-500 h-full transition-all duration-300" style="width: 0%" title="Terlaksana Sebagian"></div>
         <div id="barPending" class="bg-amber-400 h-full transition-all duration-300" style="width: 0%" title="Belum Terlaksana"></div>
         <div id="barCancel" class="bg-rose-500 h-full transition-all duration-300" style="width: 0%" title="Tidak Terlaksana"></div>
       </div>
@@ -234,7 +218,6 @@
             <option value="Terlaksana">🟢 Terlaksana</option>
             <option value="Tidak Terlaksana">🔴 Tidak Terlaksana</option>
             <option value="Belum Terlaksana">🟡 Belum Terlaksana</option>
-            <option value="Terlaksana Sebagian">🔵 Terlaksana Sebagian</option>
           </select>
         </div>
       </div>
@@ -252,20 +235,17 @@
 
         <!-- Batch apply status -->
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-slate-500 font-medium mr-1">Tandai Terpilih:</span>
-          <button onclick="batchSetStatus('Terlaksana')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded font-medium flex items-center gap-1 transition">
+          <span class="text-slate-500 font-medium mr-1">Tandai Terpilih Sekaligus:</span>
+          <button onclick="batchSetStatus('Terlaksana')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded-lg font-semibold flex items-center gap-1 transition">
             🟢 Terlaksana
           </button>
-          <button onclick="batchSetStatus('Tidak Terlaksana')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-2.5 py-1 rounded font-medium flex items-center gap-1 transition">
-            🔴 Tidak
+          <button onclick="batchSetStatus('Tidak Terlaksana')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 px-3 py-1 rounded-lg font-semibold flex items-center gap-1 transition">
+            🔴 Tidak Terlaksana
           </button>
-          <button onclick="batchSetStatus('Belum Terlaksana')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2.5 py-1 rounded font-medium flex items-center gap-1 transition">
-            🟡 Belum
+          <button onclick="batchSetStatus('Belum Terlaksana')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded-lg font-semibold flex items-center gap-1 transition">
+            🟡 Belum Terlaksana
           </button>
-          <button onclick="batchSetStatus('Terlaksana Sebagian')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-2.5 py-1 rounded font-medium flex items-center gap-1 transition">
-            🔵 Sebagian
-          </button>
-          <button onclick="batchSetStatus('')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded transition" title="Kosongkan status">
+          <button onclick="batchSetStatus('')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded-lg transition" title="Kosongkan status">
             ✕ Reset
           </button>
         </div>
@@ -288,7 +268,7 @@
               <th class="p-2.5 w-32 text-right">Jumlah (Rp)</th>
               <th class="p-2.5 w-28 text-right">Tahap 1</th>
               <th class="p-2.5 w-28 text-right">Tahap 2</th>
-              <th class="p-2.5 min-w-[260px] text-center bg-slate-900">Verifikasi Cepat</th>
+              <th class="p-2.5 w-48 text-center bg-slate-900">Tombol Switch Status</th>
               <th class="p-2.5 min-w-[180px]">Catatan / Keterangan</th>
             </tr>
           </thead>
@@ -301,7 +281,7 @@
       <!-- FOOTER TABLE INFO -->
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
         <div class="flex items-center gap-3">
-          <span>💡 <em>Klik pada baris mana saja, lalu gunakan angka <strong>1, 2, 3, 4</strong> dan panah <strong>↓ / ↑</strong> pada keyboard untuk verifikasi kilat!</em></span>
+          <span>💡 <strong>Tips Cepat:</strong> Cukup klik <strong>1 Tombol Switch</strong> untuk berganti status (<em>Belum ➔ Terlaksana ➔ Tidak Terlaksana</em>), atau tekan <kbd class="bg-white border px-1.5 py-0.5 rounded font-mono font-bold text-slate-700">Spasi</kbd> / <kbd class="bg-white border px-1.5 py-0.5 rounded font-mono font-bold text-slate-700">Enter</kbd> pada keyboard!</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Auto-save aktif (Tersimpan otomatis di browser)
@@ -321,23 +301,23 @@
         <button onclick="toggleKeyboardModal(false)" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
       </div>
       <div class="py-4 space-y-3 text-xs">
-        <p class="text-slate-600">Klik salah satu baris di tabel, lalu Anda bisa menekan tombol berikut tanpa perlu menggunakan mouse:</p>
+        <p class="text-slate-600">Klik salah satu baris di tabel, lalu gunakan tombol keyboard berikut:</p>
         <div class="space-y-2">
+          <div class="flex items-center justify-between bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+            <span class="font-semibold text-indigo-900">Switch Status & Lanjut ke Baris Bawah</span>
+            <kbd class="px-2.5 py-1 bg-white border border-indigo-300 rounded shadow-xs font-bold text-indigo-700">Spasi / Enter</kbd>
+          </div>
           <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
-            <span class="font-medium text-slate-700">Tandai Terlaksana</span>
+            <span class="font-medium text-slate-700">Langsung Terlaksana</span>
             <kbd class="px-2 py-1 bg-white border border-slate-300 rounded shadow-xs font-bold text-emerald-600">1</kbd>
           </div>
           <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
-            <span class="font-medium text-slate-700">Tandai Tidak Terlaksana</span>
+            <span class="font-medium text-slate-700">Langsung Tidak Terlaksana</span>
             <kbd class="px-2 py-1 bg-white border border-slate-300 rounded shadow-xs font-bold text-rose-600">2</kbd>
           </div>
           <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
-            <span class="font-medium text-slate-700">Tandai Belum Terlaksana</span>
+            <span class="font-medium text-slate-700">Langsung Belum Terlaksana</span>
             <kbd class="px-2 py-1 bg-white border border-slate-300 rounded shadow-xs font-bold text-amber-600">3</kbd>
-          </div>
-          <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
-            <span class="font-medium text-slate-700">Tandai Terlaksana Sebagian</span>
-            <kbd class="px-2 py-1 bg-white border border-slate-300 rounded shadow-xs font-bold text-blue-600">4</kbd>
           </div>
           <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
             <span class="font-medium text-slate-700">Pindah ke Baris Berikutnya</span>
